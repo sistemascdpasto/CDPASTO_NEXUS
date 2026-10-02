@@ -1,0 +1,52 @@
+<?php
+
+return [
+    'accepted' => 'El campo :attribute debe ser aceptado.',
+    'alpha_dash' => 'El campo :attribute solo puede contener letras, números, guiones y guiones bajos.',
+    'array' => 'El campo :attribute debe ser una lista.',
+    'boolean' => 'El campo :attribute debe ser verdadero o falso.',
+    'confirmed' => 'La confirmación de :attribute no coincide.',
+    'current_password' => 'La contraseña es incorrecta.',
+    'date' => 'El campo :attribute debe ser una fecha válida.',
+    'email' => 'El campo :attribute debe ser un correo válido.',
+    'enum' => 'El valor seleccionado en :attribute no es válido.',
+    'exists' => 'El valor seleccionado en :attribute no es válido.',
+    'in' => 'El valor seleccionado en :attribute no es válido.',
+    'integer' => 'El campo :attribute debe ser un número entero.',
+    'lowercase' => 'El campo :attribute debe estar en minúsculas.',
+    'max' => [
+        'array' => 'El campo :attribute no debe tener más de :max elementos.',
+        'numeric' => 'El campo :attribute no debe ser mayor que :max.',
+        'string' => 'El campo :attribute no debe tener más de :max caracteres.',
+    ],
+    'min' => [
+        'array' => 'El campo :attribute debe tener al menos :min elementos.',
+        'numeric' => 'El campo :attribute debe ser al menos :min.',
+        'string' => 'El campo :attribute debe tener al menos :min caracteres.',
+    ],
+    'numeric' => 'El campo :attribute debe ser un número.',
+    'password' => [
+        'letters' => 'La :attribute debe contener al menos una letra.',
+        'mixed' => 'La :attribute debe contener mayúsculas y minúsculas.',
+        'numbers' => 'La :attribute debe contener al menos un número.',
+        'symbols' => 'La :attribute debe contener al menos un símbolo.',
+        'uncompromised' => 'La :attribute apareció en una filtración de datos. Elige otra.',
+    ],
+    'required' => 'El campo :attribute es obligatorio.',
+    'required_without' => 'El campo :attribute es obligatorio.',
+    'string' => 'El campo :attribute debe ser texto.',
+    'unique' => 'El :attribute ya está registrado.',
+    'url' => 'El campo :attribute debe ser una URL válida.',
+
+    'attributes' => [
+        'name' => 'nombre',
+        'email' => 'correo',
+        'password' => 'contraseña',
+        'phone' => 'WhatsApp',
+        'role' => 'rol',
+        'code' => 'código',
+        'recovery_code' => 'código de recuperación',
+        'minutes' => 'duración',
+        'reason' => 'motivo',
+    ],
+];
