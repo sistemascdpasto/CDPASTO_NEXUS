@@ -151,13 +151,14 @@ class Metrics
     /**
      * @return list<array{time: string, cpu: ?float, memory_gb: ?float, network_rx_gb: ?float, network_tx_gb: ?float}>
      */
-    public function resourceSeries(int $applicationId, Carbon $from): array
+    public function resourceSeries(int $applicationId, Carbon $from, string $kind = ResourceMetric::KIND_APP): array
     {
         $hours = $from->diffInHours(now());
         $bucket = $hours > 48 ? Sql::hourBucket('measured_at') : 'measured_at';
 
         return ResourceMetric::query()
             ->where('application_id', $applicationId)
+            ->where('service_kind', $kind)
             ->where('measured_at', '>=', $from)
             ->groupByRaw($bucket)
             ->orderByRaw($bucket)

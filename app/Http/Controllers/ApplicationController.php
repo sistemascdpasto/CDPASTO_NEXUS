@@ -7,10 +7,12 @@ use App\Enums\UserRole;
 use App\Http\Requests\ApplicationRequest;
 use App\Models\Application;
 use App\Models\AppSession;
+use App\Models\ResourceMetric;
 use App\Models\User;
 use App\Services\AgentInfo;
 use App\Services\AppDatabase;
 use App\Services\HealthChecker;
+use App\Services\HealthScore;
 use App\Services\Metrics;
 use App\Services\PanelAudit;
 use App\Services\RailwayClient;
@@ -48,6 +50,7 @@ class ApplicationController extends Controller
             ->get();
 
         $uptime = $metrics->uptimeByApp(now()->subDay(), $applications->pluck('id')->all());
+        $scores = app(HealthScore::class)->forApplications($applications);
 
         return Inertia::render('applications/index', [
             'applications' => $applications->map(fn (Application $app) => [
@@ -55,6 +58,8 @@ class ApplicationController extends Controller
                 'open_errors' => $app->open_errors,
                 'active_users' => $app->active_users,
                 'uptime_24h' => $uptime[$app->id] ?? null,
+                'score' => $scores[$app->id]['score'] ?? null,
+                'grade' => $scores[$app->id]['grade'] ?? null,
             ]),
             'filters' => ['status' => $status],
             'counts' => Application::visibleTo($user)->active()->toBase()
@@ -247,6 +252,7 @@ class ApplicationController extends Controller
         try {
             $sync->syncDeployments($application);
             $sync->syncMetrics($application, now()->subDay());
+            $sync->syncMetrics($application, now()->subDay(), ResourceMetric::KIND_DATABASE);
         } catch (Throwable $e) {
             report($e);
 

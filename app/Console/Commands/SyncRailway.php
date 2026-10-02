@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Application;
+use App\Models\ResourceMetric;
 use App\Services\RailwayClient;
 use App\Services\RailwaySync;
 use Illuminate\Console\Command;
@@ -28,6 +29,7 @@ class SyncRailway extends Command
             try {
                 $deployments = $sync->syncDeployments($app);
                 $points = $sync->syncMetrics($app, now()->subHours((int) $this->option('hours')));
+                $points += $sync->syncMetrics($app, now()->subHours((int) $this->option('hours')), ResourceMetric::KIND_DATABASE);
                 $this->line("{$app->name}: {$deployments} despliegues nuevos, {$points} puntos de métricas");
             } catch (Throwable $e) {
                 report($e);

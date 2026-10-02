@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Alert;
+use App\Models\Application;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -55,6 +56,14 @@ class HandleInertiaRequests extends Middleware
             'openAlerts' => fn () => $user
                 ? Alert::visibleTo($user)->whereNull('acknowledged_at')->where('severity', '!=', 'info')->count()
                 : 0,
+            // Pulso general para el encabezado: cuántas apps visibles están caídas o degradadas.
+            'systemPulse' => fn () => $user
+                ? Application::visibleTo($user)->active()->toBase()
+                    ->selectRaw('COUNT(*) as total')
+                    ->selectRaw("SUM(CASE WHEN status = 'down' THEN 1 ELSE 0 END) as down")
+                    ->selectRaw("SUM(CASE WHEN status = 'degraded' THEN 1 ELSE 0 END) as degraded")
+                    ->first()
+                : null,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

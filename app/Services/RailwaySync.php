@@ -37,8 +37,14 @@ class RailwaySync
             $becameFailed = in_array($deployment->status, self::FAILED_STATUSES, true)
                 && ($deployment->wasRecentlyCreated || $deployment->wasChanged('status'));
 
-            // Solo alertamos fallos recientes; en la primera sincronización llegan fallos históricos.
-            if ($becameFailed && $deployment->deployed_at->gt(now()->subHours(2))) {
+            // Solo alertamos fallos recientes y que sigan vigentes: si después hubo un despliegue
+            // exitoso, el fallo ya se corrigió y no hay nada que atender.
+            $superseded = Deployment::where('application_id', $app->id)
+                ->where('deployed_at', '>', $deployment->deployed_at)
+                ->where('status', 'SUCCESS')
+                ->exists();
+
+            if ($becameFailed && ! $superseded && $deployment->deployed_at->gt(now()->subHours(2))) {
                 $this->alerts->raise($app, AlertType::DeployFailed, "Despliegue fallido en {$app->name}",
                     "Estado {$deployment->status}. Commit: ".($deployment->commit_message ?? $deployment->commit_hash ?? 'desconocido'),
                     ['deployment_id' => $deployment->railway_id],
@@ -51,9 +57,18 @@ class RailwaySync
         return $new;
     }
 
-    public function syncMetrics(Application $app, ?Carbon $from = null): int
+    /**
+     * @param  string  $kind  app = servicio de la aplicación; database = su servicio MySQL (para costos).
+     */
+    public function syncMetrics(Application $app, ?Carbon $from = null, string $kind = ResourceMetric::KIND_APP): int
     {
-        $series = $this->railway->metrics($app->railway_service_id, $from ?? now()->subHour());
+        $serviceId = $kind === ResourceMetric::KIND_DATABASE ? $app->database_service_id : $app->railway_service_id;
+
+        if (! $serviceId) {
+            return 0;
+        }
+
+        $series = $this->railway->metrics($serviceId, $from ?? now()->subHour());
 
         $columns = [
             'CPU_USAGE' => 'cpu',
@@ -67,13 +82,13 @@ class RailwaySync
         foreach ($columns as $measurement => $column) {
             foreach ($series[$measurement] ?? [] as $point) {
                 $at = Carbon::createFromTimestamp($point['ts'], config('app.timezone'))->toDateTimeString();
-                $rows[$at] ??= ['application_id' => $app->id, 'measured_at' => $at, 'cpu' => null, 'memory_gb' => null, 'network_rx_gb' => null, 'network_tx_gb' => null];
+                $rows[$at] ??= ['application_id' => $app->id, 'service_kind' => $kind, 'measured_at' => $at, 'cpu' => null, 'memory_gb' => null, 'network_rx_gb' => null, 'network_tx_gb' => null];
                 $rows[$at][$column] = round((float) $point['value'], 6);
             }
         }
 
         if ($rows) {
-            ResourceMetric::upsert(array_values($rows), ['application_id', 'measured_at'], array_values($columns));
+            ResourceMetric::upsert(array_values($rows), ['application_id', 'service_kind', 'measured_at'], array_values($columns));
         }
 
         return count($rows);

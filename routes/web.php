@@ -1,23 +1,35 @@
 <?php
 
+use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\AlertController;
 use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\AppUserController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\CostController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DatabaseController;
 use App\Http\Controllers\ErrorController;
+use App\Http\Controllers\IncidentController;
 use App\Http\Controllers\LoginEventController;
+use App\Http\Controllers\NocController;
 use App\Http\Controllers\OperationsController;
 use App\Http\Controllers\PanelAuditController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\WelcomeController;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/dashboard')->name('home');
+Route::get('/', WelcomeController::class)->name('home');
 
 Route::middleware(['auth', 'active', '2fa'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('noc', NocController::class)->name('noc');
+    Route::get('activity', ActivityController::class)->name('activity');
+    Route::get('search', SearchController::class)->middleware('throttle:60,1')->name('search');
+
+    Route::get('incidents', [IncidentController::class, 'index'])->name('incidents.index');
+    Route::patch('incidents/{incident}', [IncidentController::class, 'update'])->name('incidents.update');
 
     // Aplicaciones
     Route::resource('applications', ApplicationController::class)->except('destroy');
@@ -62,6 +74,7 @@ Route::middleware(['auth', 'active', '2fa'])->group(function () {
         Route::resource('users', UserController::class)->except('show');
         Route::post('users/{user}/reset-two-factor', [UserController::class, 'resetTwoFactor'])->name('users.reset-two-factor');
         Route::get('panel-audit', PanelAuditController::class)->name('panel-audit.index');
+        Route::get('costs', CostController::class)->name('costs');
 
         // Operaciones de superusuario sobre cada app
         Route::get('applications/{application}/database', [DatabaseController::class, 'show'])->name('applications.database');

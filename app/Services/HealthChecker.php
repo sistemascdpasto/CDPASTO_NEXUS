@@ -6,7 +6,9 @@ use App\Enums\AlertType;
 use App\Enums\AppStatus;
 use App\Models\Application;
 use App\Models\HealthCheck;
+use App\Models\Incident;
 use App\Support\AgentSigner;
+use Carbon\CarbonInterval;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Client\Response;
@@ -148,6 +150,17 @@ class HealthChecker
         }
 
         if ($current === AppStatus::Down) {
+            // El incidente empieza en el primer check fallido de la racha, no cuando se confirmó la caída.
+            $firstFailure = $app->healthChecks()->latest('checked_at')->latest('id')
+                ->limit(max(1, $app->consecutive_failures))->get()->last()?->checked_at ?? now();
+
+            Incident::create([
+                'application_id' => $app->id,
+                'started_at' => $firstFailure,
+                'cause' => $error ? mb_substr($error, 0, 500) : null,
+                'failed_checks' => $app->consecutive_failures,
+            ]);
+
             $this->alerts->raise($app, AlertType::Down, "{$app->name} no responde", $error ?? 'La aplicación dejó de responder.', [
                 'url' => $app->healthUrl(),
             ], cooldown: false);
@@ -156,15 +169,24 @@ class HealthChecker
         }
 
         if ($previous === AppStatus::Down) {
-            $downSince = $app->healthChecks()
-                ->where('status', '!=', AppStatus::Down->value)
-                ->where('checked_at', '<', now()->subSeconds(5))
-                ->latest('checked_at')
-                ->value('checked_at');
+            $incident = Incident::where('application_id', $app->id)->open()->latest('started_at')->first();
 
-            $this->alerts->raise($app, AlertType::Recovered, "{$app->name} volvió a estar en línea", 'La aplicación responde nuevamente.', [
-                'down_since' => $downSince,
-            ], cooldown: false);
+            if ($incident) {
+                $failed = $app->healthChecks()->where('checked_at', '>=', $incident->started_at)->where('status', AppStatus::Down->value)->count();
+
+                $incident->update([
+                    'resolved_at' => now(),
+                    'duration_seconds' => (int) $incident->started_at->diffInSeconds(now()),
+                    'failed_checks' => $failed,
+                ]);
+            }
+
+            $duration = $incident ? CarbonInterval::seconds($incident->duration_seconds)->cascade()->forHumans(['short' => true]) : null;
+
+            $this->alerts->raise($app, AlertType::Recovered, "{$app->name} volvió a estar en línea",
+                'La aplicación responde nuevamente.'.($duration ? " Estuvo caída {$duration}." : ''), [
+                    'incident_id' => $incident?->id,
+                ], cooldown: false);
         }
     }
 }

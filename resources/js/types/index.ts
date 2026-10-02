@@ -26,6 +26,7 @@ export interface SharedData {
     name: string;
     auth: Auth;
     openAlerts: number;
+    systemPulse: { total: number | string; down: number | string | null; degraded: number | string | null } | null;
     flash: { success?: string | null; error?: string | null };
     [key: string]: unknown;
 }

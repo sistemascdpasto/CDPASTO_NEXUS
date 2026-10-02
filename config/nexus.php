@@ -42,6 +42,14 @@ return [
             && env('RAILWAY_ENVIRONMENT_ID') === env('NEXUS_RAILWAY_ENVIRONMENT_ID'),
     ],
 
+    // Precios de Railway (USD) para estimar costos a partir de las métricas de cada servicio.
+    'costs' => [
+        'vcpu_month' => (float) env('NEXUS_PRICE_VCPU_MONTH', 20),
+        'memory_gb_month' => (float) env('NEXUS_PRICE_MEMORY_GB_MONTH', 10),
+        'egress_gb' => (float) env('NEXUS_PRICE_EGRESS_GB', 0.05),
+        'usd_to_cop' => (float) env('NEXUS_USD_TO_COP', 4000),
+    ],
+
     // Días que se conserva cada tipo de dato antes de depurarlo.
     'retention_days' => [
         'health_checks' => 90,

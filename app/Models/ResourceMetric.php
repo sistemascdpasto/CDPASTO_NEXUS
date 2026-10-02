@@ -11,7 +11,12 @@ class ResourceMetric extends Model
 
     public $timestamps = false;
 
+    public const KIND_APP = 'app';
+
+    public const KIND_DATABASE = 'database';
+
     protected $fillable = [
+        'service_kind',
         'application_id',
         'measured_at',
         'cpu',

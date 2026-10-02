@@ -36,7 +36,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
     };
 
     return (
-        <AuthLayout title="Nexus · CD Pasto" description="Panel de monitoreo y auditoría de sistemas">
+        <AuthLayout title="Bienvenido de nuevo" description="Ingresa con tu cuenta de Nexus para continuar">
             <Head title="Iniciar sesión" />
 
             <form className="flex flex-col gap-6" onSubmit={submit}>

@@ -2,6 +2,7 @@ import { Meter } from '@/components/charts';
 import { EmptyState, PageHeader, applyFilters } from '@/components/nexus-ui';
 import { StatusBadge, statusColor } from '@/components/status-badge';
 import { Button } from '@/components/ui/button';
+import { HealthRing } from '@/components/viz';
 import AppLayout from '@/layouts/app-layout';
 import { formatMs, formatRelative } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,8 @@ interface AppRow {
     open_errors: number;
     active_users: number;
     uptime_24h: number | null;
+    score: number | null;
+    grade: string | null;
 }
 
 const filters: { value: AppStatus | ''; label: string }[] = [
@@ -105,7 +108,8 @@ export default function ApplicationsIndex({
                                 style={{ borderLeftWidth: 4, borderLeftColor: statusColor(app.is_active ? app.status : 'unknown') }}
                             >
                                 <div className="flex items-start justify-between gap-2">
-                                    <div className="min-w-0">
+                                    <HealthRing score={app.is_active ? app.score : null} size={46} stroke={4.5} />
+                                    <div className="min-w-0 flex-1">
                                         <h2 className="truncate font-semibold">{app.name}</h2>
                                         <p className="text-muted-foreground flex items-center gap-1 truncate text-xs">
                                             {app.url.replace(/^https?:\/\//, '')}

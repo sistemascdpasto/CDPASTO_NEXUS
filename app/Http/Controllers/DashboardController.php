@@ -8,16 +8,21 @@ use App\Models\Application;
 use App\Models\AppSession;
 use App\Models\ErrorEvent;
 use App\Models\ErrorGroup;
+use App\Models\Incident;
 use App\Models\LoginEvent;
+use App\Services\ActivityFeed;
 use App\Services\AgentInfo;
+use App\Services\CostEstimator;
+use App\Services\HealthScore;
 use App\Services\Metrics;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request, Metrics $metrics): Response
+    public function __invoke(Request $request, Metrics $metrics, HealthScore $healthScore, ActivityFeed $feed, CostEstimator $costs): Response
     {
         $user = $request->user();
         $applications = Application::visibleTo($user)->active()->orderBy('name')->get();
@@ -38,6 +43,9 @@ class DashboardController extends Controller
             ->groupBy('application_id')
             ->selectRaw('application_id, COUNT(*) as total')
             ->pluck('total', 'application_id');
+
+        $scores = $healthScore->forApplications($applications);
+        $openIncidents = Incident::whereIn('application_id', $ids)->open()->with('application:id,name')->get();
 
         return Inertia::render('dashboard', [
             'kpis' => [
@@ -68,11 +76,21 @@ class DashboardController extends Controller
                 'failed_jobs' => $app->last_info['failed_jobs']['total'] ?? null,
                 'maintenance' => (bool) ($app->last_info['environment']['maintenance'] ?? false),
                 'storage_percent' => $app->last_info['storage']['used_percent'] ?? null,
+                'score' => $scores[$app->id]['score'] ?? null,
+                'grade' => $scores[$app->id]['grade'] ?? null,
             ]),
             'findings' => $user->isSuperadmin() ? $applications
                 ->flatMap(fn (Application $app) => collect(AgentInfo::findings($app))->map(fn ($f) => [...$f, 'app' => $app->name, 'app_id' => $app->id]))
                 ->values() : [],
             'traffic' => $metrics->requestSeries(now()->subDay(), $ids),
+            'openIncidents' => $openIncidents->map(fn (Incident $i) => [
+                'id' => $i->id,
+                'app' => $i->application?->name,
+                'started_at' => $i->started_at,
+                'cause' => $i->cause,
+            ]),
+            'feed' => $feed->latest($ids, 8, ['audit', 'login', 'error']),
+            'costs' => $user->isSuperadmin() ? Arr::only($costs->monthly($applications), ['total_projected', 'total_to_date', 'month_progress']) : null,
             'recentAlerts' => Alert::with('application:id,name')
                 ->whereIn('application_id', $ids)
                 ->latest()
