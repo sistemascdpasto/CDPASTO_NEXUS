@@ -890,7 +890,7 @@ function IntegrationTab({ application: app, apiKey }: Props) {
                             EasyOL y Tickets ya lo tienen). Para una app nueva, cópialo desde Nexus y requiérelo:
                             <CopyField
                                 value={
-                                    'composer config repositories.nexus-agent \'{"type":"path","url":"packages/nexus-agent","options":{"symlink":false}}\'\ncomposer require cdpasto/nexus-agent:^1.1'
+                                    'composer config repositories.nexus-agent \'{"type":"path","url":"packages/nexus-agent","options":{"symlink":true}}\'\ncomposer require cdpasto/nexus-agent:^1.1'
                                 }
                             />
                         </li>

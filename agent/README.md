@@ -26,10 +26,14 @@ acceso a otros repos). Adenar, EasyOL y Tickets ya lo tienen. Para una app nueva
 
 ```bash
 # copiar Nexus/agent a <app>/packages/nexus-agent, luego:
-composer config repositories.nexus-agent '{"type":"path","url":"packages/nexus-agent","options":{"symlink":false}}'
+composer config repositories.nexus-agent '{"type":"path","url":"packages/nexus-agent","options":{"symlink":true}}'
 composer require cdpasto/nexus-agent:^1.1
 php artisan vendor:publish --tag=nexus-config   # opcional: excluir modelos, campo de login…
 ```
+
+Además, en el `composer.json` de la app agrega en `autoload.psr-4`:
+`"Cdpasto\\NexusAgent\\": "packages/nexus-agent/src/"`. Railpack ejecuta `composer install` antes de
+copiar el código de la app; el symlink y este autoload de respaldo garantizan que la clase se encuentre.
 
 Variables en los servicios **web y scheduler** de Railway (la API key se obtiene en Nexus → app → Integración):
 
