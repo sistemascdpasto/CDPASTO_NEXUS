@@ -15,6 +15,7 @@ interface FormApp {
     description?: string | null;
     type: 'laravel' | 'static';
     url?: string;
+    internal_url?: string | null;
     health_path?: string | null;
     environment: string;
     railway_service_id?: string | null;
@@ -45,6 +46,7 @@ export default function ApplicationForm({ application, railwayServices, users }:
         description: application.description ?? '',
         type: application.type,
         url: application.url ?? '',
+        internal_url: application.internal_url ?? '',
         health_path: application.health_path ?? '',
         environment: application.environment,
         railway_service_id: application.railway_service_id ?? '',
@@ -101,6 +103,18 @@ export default function ApplicationForm({ application, railwayServices, users }:
                                 onChange={(e) => setData('url', e.target.value)}
                                 placeholder="https://miapp.up.railway.app"
                                 required
+                            />
+                        </Field>
+                        <Field
+                            label="URL interna (red privada de Railway)"
+                            error={errors.internal_url}
+                            hint="Ej. http://miservicio.railway.internal:8080. Nexus la usa desde Railway porque la URL pública falla a ratos entre servicios."
+                            className="sm:col-span-2"
+                        >
+                            <Input
+                                value={data.internal_url}
+                                onChange={(e) => setData('internal_url', e.target.value)}
+                                placeholder="http://servicio.railway.internal:8080"
                             />
                         </Field>
                         <Field label="Tipo" error={errors.type}>

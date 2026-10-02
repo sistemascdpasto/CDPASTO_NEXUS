@@ -293,7 +293,7 @@ class ApplicationController extends Controller
         return [
             'application' => $application->exists ? [
                 ...$application->only([
-                    'id', 'name', 'slug', 'description', 'type', 'url', 'health_path', 'environment', 'railway_service_id',
+                    'id', 'name', 'slug', 'description', 'type', 'url', 'internal_url', 'health_path', 'environment', 'railway_service_id',
                     'railway_service_name', 'database_service_id', 'database_service_name', 'repository', 'check_interval_minutes', 'slow_threshold_ms', 'error_threshold',
                     'failed_login_threshold', 'mass_delete_threshold', 'is_active',
                 ]),

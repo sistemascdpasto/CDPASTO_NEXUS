@@ -26,6 +26,7 @@ class ApplicationRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:1000'],
             'type' => ['required', Rule::in([Application::TYPE_LARAVEL, Application::TYPE_STATIC])],
             'url' => ['required', 'url:https,http', 'max:255'],
+            'internal_url' => ['nullable', 'url:http,https', 'max:255'],
             'health_path' => ['nullable', 'string', 'max:255'],
             'environment' => ['required', 'string', 'max:30'],
             'railway_service_id' => ['nullable', 'string', 'max:64'],

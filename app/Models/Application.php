@@ -26,6 +26,7 @@ class Application extends Model
         'description',
         'type',
         'url',
+        'internal_url',
         'health_path',
         'environment',
         'railway_service_id',
@@ -114,12 +115,21 @@ class Application extends Model
     {
         $path = $this->health_path ?: ($this->isLaravel() ? '/nexus/health' : '/');
 
-        return rtrim($this->url, '/').'/'.ltrim($path, '/');
+        return rtrim($this->baseUrl(), '/').'/'.ltrim($path, '/');
     }
 
     public function agentUrl(string $path): string
     {
-        return rtrim($this->url, '/').'/nexus/'.ltrim($path, '/');
+        return rtrim($this->baseUrl(), '/').'/nexus/'.ltrim($path, '/');
+    }
+
+    /**
+     * Dentro de Railway se usa la red privada: la URL pública falla de forma intermitente
+     * entre contenedores del mismo proyecto (hairpin) y generaría falsas caídas.
+     */
+    public function baseUrl(): string
+    {
+        return $this->internal_url && config('nexus.railway.inside') ? $this->internal_url : $this->url;
     }
 
     public function isDueForCheck(): bool

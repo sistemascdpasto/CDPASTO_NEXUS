@@ -85,6 +85,21 @@ class HealthCheckTest extends TestCase
         $this->assertStringContainsString('agente', $check->error);
     }
 
+    public function test_inside_railway_the_private_url_is_used()
+    {
+        $app = Application::factory()->create(['url' => 'https://adenar.up.railway.app', 'internal_url' => 'http://adenar.railway.internal:8080']);
+        Http::fake(['*' => Http::response(['components' => []])]);
+
+        config(['nexus.railway.inside' => false]);
+        $this->assertSame('https://adenar.up.railway.app/nexus/health', $app->healthUrl());
+
+        config(['nexus.railway.inside' => true]);
+        app(HealthChecker::class)->check($app);
+
+        Http::assertSent(fn (Request $request) => $request->url() === 'http://adenar.railway.internal:8080/nexus/health');
+        $this->assertSame('http://adenar.railway.internal:8080/nexus/commands', $app->agentUrl('commands'));
+    }
+
     public function test_command_only_checks_apps_that_are_due()
     {
         $due = Application::factory()->create(['url' => 'https://a.test', 'last_checked_at' => now()->subMinutes(6), 'check_interval_minutes' => 5]);
