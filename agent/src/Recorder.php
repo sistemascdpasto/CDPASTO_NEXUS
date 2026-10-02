@@ -184,7 +184,7 @@ class Recorder
                 return $user->getRoleNames()->implode(', ') ?: null;
             }
 
-            $role = $user->role ?? null;
+            $role = $user->role ?? $user->rol ?? null;
 
             return $role instanceof \BackedEnum ? (string) $role->value : ($role ? (string) $role : null);
         } catch (Throwable) {

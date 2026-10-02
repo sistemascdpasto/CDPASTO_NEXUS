@@ -129,11 +129,11 @@ class DatabaseInspector
         $db = $this->databases->connection($app);
         $columns = $this->userColumns($db);
 
-        $query = $db->table('users')->select(array_values(array_intersect(['id', 'name', 'first_name', 'last_name', 'email', 'identification_number', 'identification', 'role', 'is_active', 'created_at', 'deleted_at'], $columns)));
+        $query = $db->table('users')->select(array_values(array_intersect(['id', 'name', 'first_name', 'last_name', 'nombres', 'apellidos', 'email', 'identification_number', 'identification', 'numero_identificacion', 'role', 'rol', 'is_active', 'activo', 'created_at', 'deleted_at'], $columns)));
 
         if ($search) {
             $query->where(function ($q) use ($search, $columns) {
-                foreach (array_intersect(['name', 'email', 'identification_number', 'identification', 'first_name', 'last_name'], $columns) as $column) {
+                foreach (array_intersect(['name', 'email', 'identification_number', 'identification', 'numero_identificacion', 'first_name', 'last_name', 'nombres', 'apellidos'], $columns) as $column) {
                     $q->orWhere($column, 'like', "%{$search}%");
                 }
 
@@ -143,14 +143,15 @@ class DatabaseInspector
             });
         }
 
-        if ($status === 'active' && in_array('is_active', $columns, true)) {
-            $query->where('is_active', true);
-        } elseif ($status === 'inactive' && in_array('is_active', $columns, true)) {
-            $query->where('is_active', false);
+        // Cada app nombra distinto la columna de cuenta activa (is_active en Adenar/Tickets, activo en 5S).
+        $activeColumn = collect(['is_active', 'activo'])->first(fn ($c) => in_array($c, $columns, true));
+
+        if ($activeColumn && in_array($status, ['active', 'inactive'], true)) {
+            $query->where($activeColumn, $status === 'active');
         }
 
         $total = (clone $query)->count();
-        $users = $query->orderBy(in_array('name', $columns, true) ? 'name' : 'id')->forPage($page, $perPage)->get();
+        $users = $query->orderBy(collect(['name', 'nombres'])->first(fn ($c) => in_array($c, $columns, true)) ?? 'id')->forPage($page, $perPage)->get();
 
         return [
             'users' => $this->enrich($app, $db, $users)->values()->all(),
@@ -194,15 +195,15 @@ class DatabaseInspector
 
         return $users->map(function ($user) use ($roles, $lastLogins, $lastActivity, $online) {
             $id = (string) $user->id;
-            $name = $user->name ?? trim(($user->first_name ?? '').' '.($user->last_name ?? ''));
+            $name = $user->name ?? trim(($user->first_name ?? $user->nombres ?? '').' '.($user->last_name ?? $user->apellidos ?? ''));
 
             return [
                 'id' => $id,
                 'name' => $name ?: "#{$id}",
                 'email' => $user->email ?? null,
-                'document' => $user->identification_number ?? $user->identification ?? null,
-                'roles' => $roles[$id] ?? (isset($user->role) ? [(string) $user->role] : []),
-                'is_active' => isset($user->is_active) ? (bool) $user->is_active : null,
+                'document' => $user->identification_number ?? $user->identification ?? $user->numero_identificacion ?? null,
+                'roles' => $roles[$id] ?? (isset($user->role) || isset($user->rol) ? [(string) ($user->role ?? $user->rol)] : []),
+                'is_active' => isset($user->is_active) ? (bool) $user->is_active : (isset($user->activo) ? (bool) $user->activo : null),
                 'deleted' => ! empty($user->deleted_at),
                 'created_at' => $user->created_at ?? null,
                 'last_login_at' => $lastLogins[$id] ?? null,

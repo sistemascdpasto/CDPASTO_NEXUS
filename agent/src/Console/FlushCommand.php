@@ -5,11 +5,11 @@ namespace Cdpasto\NexusAgent\Console;
 use Cdpasto\NexusAgent\Flusher;
 use Cdpasto\NexusAgent\Recorder;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class FlushCommand extends Command
 {
-    public const HEARTBEAT_KEY = 'nexus-agent:scheduler-at';
+    public const HEARTBEAT_KEY = 'scheduler_at';
 
     protected $signature = 'nexus:flush';
 
@@ -18,7 +18,10 @@ class FlushCommand extends Command
     public function handle(): int
     {
         // Latido: si el scheduler deja de correr, Nexus lo detecta en el health check.
-        rescue(fn () => Cache::forever(self::HEARTBEAT_KEY, now()->timestamp), report: false);
+        rescue(fn () => DB::table('nexus_state')->updateOrInsert(
+            ['key' => self::HEARTBEAT_KEY],
+            ['value' => (string) now()->timestamp, 'updated_at' => now()],
+        ), report: false);
 
         if (! Recorder::enabled()) {
             $this->warn('Agente Nexus desactivado: configura NEXUS_URL y NEXUS_KEY.');

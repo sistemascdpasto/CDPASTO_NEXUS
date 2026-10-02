@@ -8,6 +8,7 @@ APPS=(
   "/c/Users/Brian/OneDrive/Escritorio/SistemaGestionAdenar-main/SistemaGestionAdenar-main"
   "/c/Users/Brian/OneDrive/Escritorio/CDPASTO_SistemaGestionEASYOL"
   "/c/Users/Brian/OneDrive/Escritorio/SISTEMA DE TICKETS/sistema_tickets"
+  "/c/Users/Brian/OneDrive/Escritorio/Formularios-5-s-main/Formularios-5-s-main"
 )
 
 for app in "${APPS[@]}"; do

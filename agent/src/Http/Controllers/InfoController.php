@@ -159,8 +159,11 @@ class InfoController
             $table = (new $model)->getTable();
             $stats = ['total' => (clone $query)->count()];
 
-            if (Schema::hasColumn($table, 'is_active')) {
-                $stats['active'] = (clone $query)->where('is_active', true)->count();
+            foreach (['is_active', 'activo', 'active'] as $column) {
+                if (Schema::hasColumn($table, $column)) {
+                    $stats['active'] = (clone $query)->where($column, true)->count();
+                    break;
+                }
             }
 
             $stats['created_last_30d'] = (clone $query)->where('created_at', '>=', now()->subDays(30))->count();

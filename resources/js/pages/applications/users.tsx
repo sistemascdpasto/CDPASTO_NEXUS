@@ -79,7 +79,7 @@ export default function ApplicationUsers({ application: app, directory, known, f
                                 placeholder="Nombre, correo, documento o ID…"
                             />
                         </form>
-                        {directory.columns.includes('is_active') && (
+                        {(directory.columns.includes('is_active') || directory.columns.includes('activo')) && (
                             <NativeSelect
                                 value={filters.status ?? ''}
                                 onChange={(e) => update({ status: e.target.value, page: undefined })}

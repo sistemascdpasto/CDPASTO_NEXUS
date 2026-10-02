@@ -2,7 +2,7 @@
     "name": "cdpasto/nexus-agent",
     "description": "Agente de monitoreo y auditoría para el panel Nexus de CD Pasto",
     "type": "library",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "license": "proprietary",
     "require": {
         "php": "^8.2",

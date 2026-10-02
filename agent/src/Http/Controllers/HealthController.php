@@ -38,7 +38,7 @@ class HealthController
         ];
 
         // Solo si la app tiene scheduler (alguna vez registró latido).
-        $heartbeat = rescue(fn () => Cache::get(FlushCommand::HEARTBEAT_KEY), null, false);
+        $heartbeat = (int) rescue(fn () => DB::table('nexus_state')->where('key', FlushCommand::HEARTBEAT_KEY)->value('value'), null, false);
 
         if ($heartbeat) {
             $minutes = (int) floor((time() - $heartbeat) / 60);
