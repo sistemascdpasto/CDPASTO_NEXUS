@@ -55,10 +55,13 @@ php artisan schedule:work           # health checks y sincronización
 
 ## Despliegue en Railway
 
-1. Servicio **web** desde este repo + base MySQL. `railway.json` migra y siembra en cada despliegue.
-2. Servicio **scheduler** (mismo repo) con *Config file* = `railway.scheduler.json` (arranca `php artisan schedule:work`, sin migrar).
-   Ejecuta health checks (cada minuto), sincronización de Railway (5 min), depuración diaria y
-   el envío de notificaciones encoladas.
+Proyecto `blissful-prosperity` (mismo que las apps, para usar la red privada hacia sus bases):
+
+1. **CDPASTO_NEXUS** (web) desde este repo + base **MySQL-Nexus**. *Pre-deploy command* (en la
+   configuración del servicio): `php artisan migrate --force && php artisan db:seed --force`.
+2. **CDPASTO_NEXUS_Scheduler** (mismo repo), *start command* `php artisan schedule:work`, sin pre-deploy.
+   Ejecuta health checks (cada minuto), sincronización de Railway (5 min), ficha técnica (cada hora),
+   depuración diaria y el envío de notificaciones encoladas. Sus variables referencian las del web.
 3. Variables (ambos servicios): las de `.env.example`, más `APP_URL`, `DB_*`, `MAIL_*`,
    `RAILWAY_API_TOKEN` (token de cuenta o equipo con acceso al proyecto), `NEXUS_RAILWAY_PROJECT_ID`,
    `NEXUS_RAILWAY_ENVIRONMENT_ID` y, para WhatsApp,
