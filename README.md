@@ -56,7 +56,7 @@ php artisan schedule:work           # health checks y sincronización
 ## Despliegue en Railway
 
 1. Servicio **web** desde este repo + base MySQL. `railway.json` migra y siembra en cada despliegue.
-2. Servicio **scheduler** (mismo repo) con start command `php artisan schedule:work`.
+2. Servicio **scheduler** (mismo repo) con *Config file* = `railway.scheduler.json` (arranca `php artisan schedule:work`, sin migrar).
    Ejecuta health checks (cada minuto), sincronización de Railway (5 min), depuración diaria y
    el envío de notificaciones encoladas.
 3. Variables (ambos servicios): las de `.env.example`, más `APP_URL`, `DB_*`, `MAIL_*`,
