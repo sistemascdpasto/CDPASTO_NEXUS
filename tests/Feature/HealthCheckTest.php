@@ -8,6 +8,7 @@ use App\Models\Alert;
 use App\Models\Application;
 use App\Services\HealthChecker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
@@ -83,6 +84,20 @@ class HealthCheckTest extends TestCase
         $check = $app->healthChecks()->sole();
         $this->assertSame(AppStatus::Degraded, $check->status);
         $this->assertStringContainsString('agente', $check->error);
+    }
+
+    public function test_nexus_own_resource_failures_do_not_count_as_outages()
+    {
+        $app = Application::factory()->static()->create(['url' => 'https://easyol.test']);
+        Http::fake(fn () => throw new ConnectionException('cURL error 6: getaddrinfo() thread failed to start'));
+
+        app(HealthChecker::class)->check($app);
+        app(HealthChecker::class)->check($app->fresh());
+
+        $this->assertSame(AppStatus::Unknown, $app->healthChecks()->latest('id')->first()->status);
+        $this->assertSame(0, $app->fresh()->consecutive_failures);
+        $this->assertNotSame(AppStatus::Down, $app->fresh()->status);
+        $this->assertSame(0, Alert::count());
     }
 
     public function test_inside_railway_the_private_url_is_used()

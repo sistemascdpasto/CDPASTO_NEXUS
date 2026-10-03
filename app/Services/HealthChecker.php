@@ -66,6 +66,20 @@ class HealthChecker
     {
         [$checkStatus, $httpStatus, $responseMs, $components, $error] = $this->evaluate($app, $result, $elapsedMs);
 
+        // Si la falla es del propio Nexus (sin hilos/procesos disponibles), no dice nada de la app:
+        // se registra como "sin datos" sin abrir incidentes ni enviar alertas.
+        if ($checkStatus === AppStatus::Down && $error && self::isLocalFailure($error)) {
+            $app->healthChecks()->create([
+                'status' => AppStatus::Unknown,
+                'error' => mb_substr('Nexus no pudo verificar (recursos del servidor de Nexus): '.$error, 0, 500),
+                'checked_at' => now(),
+            ]);
+            $app->forceFill(['last_checked_at' => now()])->save();
+            report(new \RuntimeException("Nexus sin recursos para verificar {$app->name}: {$error}"));
+
+            return;
+        }
+
         $app->healthChecks()->create([
             'status' => $checkStatus,
             'http_status' => $httpStatus,
@@ -141,6 +155,14 @@ class HealthChecker
         }
 
         return [AppStatus::Online, $status, $responseMs, $components, null];
+    }
+
+    /**
+     * Errores que indican que el contenedor de Nexus se quedó sin recursos, no que la app falle.
+     */
+    public static function isLocalFailure(string $error): bool
+    {
+        return (bool) preg_match('/thread failed to start|Cannot fork|Resource temporarily unavailable|Too many open files/i', $error);
     }
 
     private function notifyTransition(Application $app, ?AppStatus $previous, AppStatus $current, ?string $error): void

@@ -22,7 +22,7 @@ use Throwable;
 
 class NexusAgentServiceProvider extends ServiceProvider
 {
-    public const VERSION = '1.1.1';
+    public const VERSION = '1.1.2';
 
     public function register(): void
     {
@@ -40,8 +40,10 @@ class NexusAgentServiceProvider extends ServiceProvider
             $this->commands([FlushCommand::class]);
 
             // Si la app tiene scheduler, también envía cada minuto aunque no haya tráfico web.
+            // Sin runInBackground(): en contenedores sin init (Railway) cada proceso en segundo plano
+            // queda zombi, se agota el límite de procesos y el scheduler de la app deja de correr.
             $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
-                $schedule->command('nexus:flush')->everyMinute()->withoutOverlapping(5)->runInBackground();
+                $schedule->command('nexus:flush')->everyMinute()->withoutOverlapping(5);
             });
         }
 
