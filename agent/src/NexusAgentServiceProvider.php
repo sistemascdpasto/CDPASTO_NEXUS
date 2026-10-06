@@ -22,7 +22,7 @@ use Throwable;
 
 class NexusAgentServiceProvider extends ServiceProvider
 {
-    public const VERSION = '1.1.2';
+    public const VERSION = '1.1.3';
 
     public function register(): void
     {

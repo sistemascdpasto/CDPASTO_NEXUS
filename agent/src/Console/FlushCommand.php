@@ -11,6 +11,15 @@ class FlushCommand extends Command
 {
     public const HEARTBEAT_KEY = 'scheduler_at';
 
+    public const FAILURES_KEY = 'flush_failures';
+
+    /**
+     * Fallos seguidos tolerados antes de que el comando falle. Mientras Nexus no responde la
+     * telemetría queda en nexus_buffer y se reenvía sola, así que un corte breve (un despliegue,
+     * un reinicio) no debe reportarse como error de la aplicación.
+     */
+    public const TOLERATED_FAILURES = 15;
+
     protected $signature = 'nexus:flush';
 
     protected $description = 'Envía a Nexus la telemetría pendiente y las sesiones activas';
@@ -31,8 +40,40 @@ class FlushCommand extends Command
 
         $result = (new Flusher)->flush();
 
-        $result['ok'] ? $this->info("{$result['sent']} eventos enviados a Nexus.") : $this->error($result['message']);
+        if ($result['ok']) {
+            $this->recordFailures(0);
+            $this->info("{$result['sent']} eventos enviados a Nexus.");
 
-        return $result['ok'] ? self::SUCCESS : self::FAILURE;
+            return self::SUCCESS;
+        }
+
+        $failures = $this->recordFailures(null);
+
+        if ($failures < self::TOLERATED_FAILURES) {
+            $this->warn("Nexus no respondió ({$failures} seguidos); se reintenta en el próximo minuto: {$result['message']}");
+
+            return self::SUCCESS;
+        }
+
+        $this->error("Nexus lleva {$failures} intentos seguidos sin responder: {$result['message']}");
+
+        return self::FAILURE;
+    }
+
+    /**
+     * Reinicia (0) o incrementa (null) el contador de fallos seguidos y devuelve su valor.
+     */
+    private function recordFailures(?int $value): int
+    {
+        return rescue(function () use ($value) {
+            $current = (int) DB::table('nexus_state')->where('key', self::FAILURES_KEY)->value('value');
+            $next = $value ?? $current + 1;
+
+            if ($next !== $current) {
+                DB::table('nexus_state')->updateOrInsert(['key' => self::FAILURES_KEY], ['value' => (string) $next, 'updated_at' => now()]);
+            }
+
+            return $next;
+        }, $value ?? 1, report: false);
     }
 }

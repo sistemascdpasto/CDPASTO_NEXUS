@@ -43,7 +43,8 @@ class Flusher
         $lock = Cache::lock('nexus-agent:flushing', 120);
 
         if (! $lock->get()) {
-            return ['ok' => false, 'sent' => 0, 'message' => 'Otro envío en curso'];
+            // La petición web o el scheduler ya están enviando: no es una falla.
+            return ['ok' => true, 'sent' => 0, 'message' => 'Otro envío en curso'];
         }
 
         try {
