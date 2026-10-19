@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\AlertController;
+use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\AppUserController;
 use App\Http\Controllers\AuditLogController;
@@ -74,6 +75,10 @@ Route::middleware(['auth', 'active', '2fa'])->group(function () {
         Route::resource('users', UserController::class)->except('show');
         Route::post('users/{user}/reset-two-factor', [UserController::class, 'resetTwoFactor'])->name('users.reset-two-factor');
         Route::get('panel-audit', PanelAuditController::class)->name('panel-audit.index');
+
+        // Anuncios que se muestran al iniciar sesión en las apps y en la web principal
+        Route::resource('announcements', AnnouncementController::class)->except('show');
+        Route::post('announcements/{announcement}/toggle', [AnnouncementController::class, 'toggle'])->name('announcements.toggle');
         Route::get('costs', CostController::class)->name('costs');
 
         // Operaciones de superusuario sobre cada app

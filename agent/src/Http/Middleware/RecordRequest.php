@@ -2,6 +2,7 @@
 
 namespace Cdpasto\NexusAgent\Http\Middleware;
 
+use Cdpasto\NexusAgent\Announcements;
 use Cdpasto\NexusAgent\Flusher;
 use Cdpasto\NexusAgent\Recorder;
 use Closure;
@@ -22,8 +23,44 @@ class RecordRequest
     public function handle(Request $request, Closure $next): Response
     {
         $request->attributes->set('nexus_started_at', microtime(true));
+        Announcements::flush();
 
-        return $next($request);
+        $response = $next($request);
+
+        try {
+            $this->injectAnnouncements($request, $response);
+        } catch (Throwable) {
+            // Nunca afectar la respuesta del usuario.
+        }
+
+        return $response;
+    }
+
+    /**
+     * Agrega el script de anuncios a las páginas HTML completas (no a las respuestas JSON de
+     * Inertia, descargas ni archivos). El script solo muestra algo después de un login.
+     */
+    private function injectAnnouncements(Request $request, Response $response): void
+    {
+        if (! $request->isMethod('GET')
+            || $request->header('X-Inertia')
+            || $response instanceof BinaryFileResponse
+            || $response instanceof StreamedResponse
+            || $response->getStatusCode() !== 200
+            || ! str_contains((string) $response->headers->get('Content-Type'), 'text/html')
+            || ! Recorder::enabled()) {
+            return;
+        }
+
+        $content = $response->getContent();
+
+        if (! is_string($content) || ($position = strripos($content, '</body>')) === false) {
+            return;
+        }
+
+        if ($tag = Announcements::scriptTag()) {
+            $response->setContent(substr_replace($content, $tag."\n", $position, 0));
+        }
     }
 
     public function terminate(Request $request, Response $response): void

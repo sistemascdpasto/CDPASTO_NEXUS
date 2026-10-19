@@ -11,6 +11,7 @@ import {
     CircleDollarSign,
     KeyRound,
     LayoutGrid,
+    Megaphone,
     Radio,
     ScrollText,
     ShieldCheck,
@@ -40,6 +41,7 @@ export function AppSidebar() {
     ];
 
     const admin: NavItem[] = [
+        { title: 'Anuncios', url: '/announcements', icon: Megaphone },
         { title: 'Costos de Railway', url: '/costs', icon: CircleDollarSign },
         { title: 'Usuarios del panel', url: '/users', icon: Users },
         { title: 'Auditoría del panel', url: '/panel-audit', icon: ShieldCheck },

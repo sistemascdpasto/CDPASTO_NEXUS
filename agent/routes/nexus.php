@@ -1,5 +1,6 @@
 <?php
 
+use Cdpasto\NexusAgent\Http\Controllers\AnnouncementController;
 use Cdpasto\NexusAgent\Http\Controllers\CommandController;
 use Cdpasto\NexusAgent\Http\Controllers\HealthController;
 use Cdpasto\NexusAgent\Http\Controllers\InfoController;
@@ -12,3 +13,6 @@ Route::prefix('nexus')->middleware(VerifyNexusSignature::class)->group(function 
     Route::get('info', InfoController::class);
     Route::post('commands', CommandController::class);
 });
+
+// Anuncios para el navegador del usuario (mismo dominio de la app; no requiere firma).
+Route::get('nexus/anuncios', AnnouncementController::class)->middleware(['web', 'throttle:30,1']);

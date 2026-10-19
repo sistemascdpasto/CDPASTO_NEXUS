@@ -20,6 +20,11 @@ return [
         'window_minutes' => (int) env('NEXUS_ALERT_WINDOW', 10),
     ],
 
+    'announcements' => [
+        // Webs sin login (sin agente) que también muestran anuncios mediante embed.js.
+        'web_apps' => ['bavaria-cdpasto'],
+    ],
+
     'whatsapp' => [
         // callmebot | meta | null (desactivado)
         'driver' => env('WHATSAPP_DRIVER'),

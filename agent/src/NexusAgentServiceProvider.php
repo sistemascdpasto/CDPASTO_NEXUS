@@ -22,7 +22,7 @@ use Throwable;
 
 class NexusAgentServiceProvider extends ServiceProvider
 {
-    public const VERSION = '1.1.3';
+    public const VERSION = '1.2.0';
 
     public function register(): void
     {
@@ -69,6 +69,7 @@ class NexusAgentServiceProvider extends ServiceProvider
     {
         Event::listen(Login::class, function (Login $event) {
             Recorder::login('login', $event->user);
+            Announcements::flagLogin();
 
             // Un usuario bloqueado que logre autenticarse es expulsado de inmediato.
             if (Blocks::isBlocked((string) $event->user->getAuthIdentifier())) {
