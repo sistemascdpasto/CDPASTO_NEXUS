@@ -37,10 +37,11 @@ class Announcements
             'items' => array_values(array_filter((array) ($payload['items'] ?? []), 'is_array')),
         ]);
 
+        // Se reporta si falla: un error silencioso aquí deja a la app sin anuncios.
         rescue(fn () => DB::table('nexus_state')->updateOrInsert(
             ['key' => self::STATE_KEY],
             ['value' => $value, 'updated_at' => now()],
-        ), report: false);
+        ));
 
         self::$cache = null;
     }
