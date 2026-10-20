@@ -88,21 +88,31 @@ class Announcements
     }
 
     /**
-     * Etiqueta <script> que se inserta en las páginas HTML de la app.
+     * Etiqueta <script> que se inserta en las páginas HTML de la app: muestra los anuncios tras
+     * el login y toma la ubicación del usuario conectado (al entrar y cada 10 minutos).
      */
     public static function scriptTag(): ?string
     {
-        if (! self::any()) {
+        $current = self::current();
+
+        if ($current['embed_url'] === null) {
             return null;
         }
 
-        $current = self::current();
+        try {
+            $authenticated = auth()->check();
+        } catch (\Throwable) {
+            $authenticated = false;
+        }
 
         return sprintf(
-            '<script src="%s" data-nexus-modo="sesion" data-nexus-app="%s" data-nexus-endpoint="%s" defer></script>',
+            '<script src="%s" data-nexus-modo="sesion" data-nexus-app="%s" data-nexus-endpoint="%s" data-nexus-anuncios="%d" data-nexus-ubicacion="%s" data-nexus-sesion="%d" defer></script>',
             e($current['embed_url']),
             e((string) $current['app']),
             '/nexus/anuncios',
+            self::any() ? 1 : 0,
+            '/nexus/ubicacion',
+            $authenticated ? 1 : 0,
         );
     }
 

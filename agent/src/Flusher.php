@@ -102,6 +102,7 @@ class Flusher
             'exceptions' => $grouped->get('exception', collect())->all(),
             'logins' => $grouped->get('login', collect())->all(),
             'audits' => $grouped->get('audit', collect())->all(),
+            'locations' => $grouped->get('location', collect())->all(),
             'sessions' => $this->activeSessions(),
         ];
     }

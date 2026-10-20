@@ -10,6 +10,7 @@ use App\Models\LoginEvent;
 use App\Models\RequestMetric;
 use App\Models\ResourceMetric;
 use App\Models\UserActivity;
+use App\Models\UserLocation;
 use Illuminate\Console\Command;
 
 class PruneTelemetry extends Command
@@ -29,6 +30,7 @@ class PruneTelemetry extends Command
             'login_events' => [LoginEvent::class, 'occurred_at'],
             'audit_logs' => [AuditLog::class, 'occurred_at'],
             'alerts' => [Alert::class, 'created_at'],
+            'user_locations' => [UserLocation::class, 'recorded_at'],
         ];
 
         foreach ($targets as $key => [$model, $column]) {

@@ -65,6 +65,8 @@ return [
         'login_events' => 365,
         'audit_logs' => (int) env('NEXUS_AUDIT_RETENTION_DAYS', 730),
         'alerts' => 180,
+        // Ubicación de los usuarios: dato personal (Ley 1581), se guarda lo justo para trazabilidad.
+        'user_locations' => (int) env('NEXUS_LOCATION_RETENTION_DAYS', 90),
     ],
 
     // Una sesión se considera activa si tuvo actividad en estos minutos.

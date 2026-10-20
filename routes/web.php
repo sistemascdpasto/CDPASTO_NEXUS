@@ -11,6 +11,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DatabaseController;
 use App\Http\Controllers\ErrorController;
 use App\Http\Controllers\IncidentController;
+use App\Http\Controllers\LocationMapController;
 use App\Http\Controllers\LoginEventController;
 use App\Http\Controllers\NocController;
 use App\Http\Controllers\OperationsController;
@@ -50,6 +51,7 @@ Route::middleware(['auth', 'active', '2fa'])->group(function () {
 
     // Usuarios de las apps: sesiones activas y acciones remotas
     Route::get('sessions', [SessionController::class, 'index'])->name('sessions.index');
+    Route::get('map', LocationMapController::class)->name('map');
     Route::post('applications/{application}/commands', [SessionController::class, 'command'])
         ->middleware('throttle:20,1')->name('applications.commands');
 

@@ -11,6 +11,7 @@ import {
     CircleDollarSign,
     KeyRound,
     LayoutGrid,
+    MapPinned,
     Megaphone,
     Radio,
     ScrollText,
@@ -36,6 +37,7 @@ export function AppSidebar() {
     const people: NavItem[] = [
         { title: 'Actividad en vivo', url: '/activity', icon: Activity },
         { title: 'Conectados ahora', url: '/sessions', icon: UsersRound },
+        { title: 'Mapa de conexiones', url: '/map', icon: MapPinned },
         { title: 'Inicios de sesión', url: '/logins', icon: KeyRound },
         { title: 'Auditoría', url: '/audit', icon: ScrollText },
     ];

@@ -50,6 +50,15 @@
         '.nxa-boton-sec{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35)}.nxa-boton-sec:hover{background:rgba(255,255,255,.24)}' +
         '.nxa-puntos{display:flex;gap:6px}.nxa-punto{width:8px;height:8px;border-radius:999px;background:rgba(255,255,255,.35)}' +
         '.nxa-punto.nxa-activo{background:#fff}' +
+        '.nxa-aviso{position:fixed;z-index:2147483645;left:50%;bottom:20px;transform:translateX(-50%);width:min(440px,calc(100vw - 32px));' +
+        'background:#0b1324;color:#e5e9f5;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:16px 18px;' +
+        'box-shadow:0 18px 50px rgba(0,0,0,.45);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}' +
+        '.nxa-aviso-titulo{margin:0 0 6px;font-size:14px;font-weight:700;color:#fff}' +
+        '.nxa-aviso-texto{margin:0 0 12px;font-size:12.5px;line-height:1.5;color:#c6cde0}' +
+        '.nxa-aviso-acciones{display:flex;gap:8px;justify-content:flex-end}' +
+        '.nxa-aviso .nxa-boton{padding:8px 16px;font-size:13px}' +
+        '.nxa-boton-aviso-sec{background:transparent;color:#c6cde0;border:1px solid rgba(255,255,255,.25)}' +
+        '.nxa-boton-aviso-sec:hover{background:rgba(255,255,255,.08)}' +
         '@media (max-width:600px){.nxa-cerrar{top:-10px;right:-6px}.nxa-img{max-height:calc(100vh - 170px)}}' +
         '@media (prefers-reduced-motion:reduce){.nxa-fondo,.nxa-caja{transition:none}}';
 
@@ -159,7 +168,7 @@
                 enlace.href = anuncio.link_url;
                 enlace.target = '_blank';
                 enlace.rel = 'noopener noreferrer';
-                enlace.textContent = anuncio.link_label || 'Ver más';
+                enlace.textContent = anuncio.link_label || 'Ver m\u00e1s';
                 enlace.addEventListener('click', function () {
                     registrar(anuncio, 'click');
                 });
@@ -251,9 +260,167 @@
             .catch(function () {});
     }
 
+    // ---------------------------------------------------------------- ubicación
+    // Solo en apps con login (lo activa el agente). Se toma al iniciar sesión y cada 10 minutos
+    // con permiso del usuario; si no lo da, la app usa la ciudad aproximada por su IP.
+    var endpointUbicacion = script.getAttribute('data-nexus-ubicacion');
+    var conSesion = script.getAttribute('data-nexus-sesion') === '1';
+    var COOKIE_UBICACION = 'nexus_ubicacion';
+    var INTERVALO = 10 * 60 * 1000;
+    var CLAVE_ULTIMA = 'nexus-ubicacion-ultima:' + app;
+    var CLAVE_AVISO = 'nexus-ubicacion-aviso:' + app;
+    var temporizador = null;
+    var enviando = false;
+
+    function leerCookie(nombre) {
+        var par = document.cookie.split(';').map(function (c) { return c.trim(); }).filter(function (c) { return c.indexOf(nombre + '=') === 0; })[0];
+        return par ? decodeURIComponent(par.slice(nombre.length + 1)) : null;
+    }
+
+    function guardado(clave) {
+        try { return localStorage.getItem(clave); } catch (e) { return null; }
+    }
+
+    function guardar(clave, valor) {
+        try { localStorage.setItem(clave, valor); } catch (e) {}
+    }
+
+    function enviarUbicacion(datos) {
+        if (!endpointUbicacion) return;
+        enviando = false;
+        fetch(endpointUbicacion, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-XSRF-TOKEN': leerCookie('XSRF-TOKEN') || '',
+            },
+            body: JSON.stringify(datos),
+        })
+            .then(function (r) {
+                if (r.status === 401) {
+                    detenerUbicacion();
+                    return;
+                }
+                if (r.ok) {
+                    guardar(CLAVE_ULTIMA, String(Date.now()));
+                    iniciarIntervalo();
+                }
+            })
+            .catch(function () {});
+    }
+
+    function pedirPosicion() {
+        if (!navigator.geolocation) {
+            enviarUbicacion({});
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            function (pos) {
+                enviarUbicacion({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy });
+            },
+            function () {
+                // Sin permiso, sin señal o tiempo agotado: la app usa la ciudad aproximada por IP.
+                enviarUbicacion({});
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 5 * 60 * 1000 },
+        );
+    }
+
+    // Aviso previo (Ley 1581 de 2012): explica para qué se usa antes de que el navegador pregunte.
+    function mostrarAviso(alAceptar, alRechazar) {
+        agregarEstilos();
+        var aviso = document.createElement('div');
+        aviso.className = 'nxa-aviso';
+        aviso.setAttribute('role', 'dialog');
+        aviso.setAttribute('aria-label', 'Permiso de ubicaci\u00f3n');
+        aviso.innerHTML =
+            '<p class="nxa-aviso-titulo">\ud83d\udccd Ubicaci\u00f3n para la trazabilidad</p>' +
+            '<p class="nxa-aviso-texto">Este sistema registra desde d\u00f3nde trabajas (al ingresar y cada 10 minutos) para la trazabilidad ' +
+            'de la informaci\u00f3n, por ejemplo la ciudad en las pruebas de alcoholemia. Solo la usa la empresa, conforme a la Ley 1581 de 2012.</p>' +
+            '<div class="nxa-aviso-acciones"><button type="button" class="nxa-boton nxa-boton-aviso-sec">Ahora no</button>' +
+            '<button type="button" class="nxa-boton nxa-boton-principal">Permitir ubicaci\u00f3n</button></div>';
+        var botones = aviso.querySelectorAll('button');
+        botones[0].addEventListener('click', function () { aviso.remove(); alRechazar(); });
+        botones[1].addEventListener('click', function () { aviso.remove(); alAceptar(); });
+        document.body.appendChild(aviso);
+    }
+
+    function tomarUbicacion() {
+        if (enviando || !endpointUbicacion) return;
+        // Si la ventana de anuncios está abierta, se espera a que la cierren.
+        if (abierto) {
+            setTimeout(tomarUbicacion, 1500);
+            return;
+        }
+        enviando = true;
+
+        var preguntar = function () {
+            var aviso = guardado(CLAVE_AVISO);
+            // Si dijo «Ahora no», se vuelve a ofrecer a los 7 días.
+            if (aviso && aviso !== 'aceptado' && Date.now() - Number(aviso) < 7 * 24 * 3600 * 1000) {
+                enviarUbicacion({});
+                return;
+            }
+            mostrarAviso(
+                function () { guardar(CLAVE_AVISO, 'aceptado'); pedirPosicion(); },
+                function () { guardar(CLAVE_AVISO, String(Date.now())); enviarUbicacion({}); },
+            );
+        };
+
+        if (navigator.permissions && navigator.permissions.query) {
+            navigator.permissions
+                .query({ name: 'geolocation' })
+                .then(function (estado) {
+                    if (estado.state === 'granted') pedirPosicion();
+                    else if (estado.state === 'denied') enviarUbicacion({});
+                    else preguntar();
+                })
+                .catch(preguntar);
+        } else {
+            preguntar();
+        }
+    }
+
+    function tocaActualizar() {
+        return Date.now() - Number(guardado(CLAVE_ULTIMA) || 0) >= INTERVALO - 15000;
+    }
+
+    function revisarUbicacion() {
+        if (!endpointUbicacion) return;
+        if (leerCookie(COOKIE_UBICACION)) {
+            // Recién inició sesión: siempre se toma.
+            document.cookie = COOKIE_UBICACION + '=; Max-Age=0; path=/';
+            tomarUbicacion();
+        } else if (conSesion && tocaActualizar()) {
+            tomarUbicacion();
+        } else if (conSesion) {
+            iniciarIntervalo();
+        }
+    }
+
+    function iniciarIntervalo() {
+        if (temporizador) return;
+        temporizador = setInterval(function () {
+            if (tocaActualizar()) tomarUbicacion();
+        }, 60 * 1000);
+    }
+
+    function detenerUbicacion() {
+        enviando = false;
+        conSesion = false;
+        if (temporizador) clearInterval(temporizador);
+        temporizador = null;
+    }
+
     function iniciar() {
         if (modo === 'sesion') {
             revisarSesion();
+            revisarUbicacion();
+            document.addEventListener('inertia:navigate', revisarUbicacion);
+            window.addEventListener('focus', revisarUbicacion);
             // Inertia cambia de página sin recargar: tras el login llega por navegación.
             document.addEventListener('inertia:navigate', revisarSesion);
             document.addEventListener('inertia:finish', revisarSesion);

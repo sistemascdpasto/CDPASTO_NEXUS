@@ -11,6 +11,7 @@ use App\Models\ErrorGroup;
 use App\Models\LoginEvent;
 use App\Models\RequestMetric;
 use App\Models\UserActivity;
+use App\Models\UserLocation;
 use App\Support\UserAgent;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +35,7 @@ class TelemetryIngestor
             'exceptions' => $this->storeExceptions($app, $payload['exceptions'] ?? []),
             'logins' => $this->storeLogins($app, $payload['logins'] ?? []),
             'audits' => $this->storeAudits($app, $payload['audits'] ?? []),
+            'locations' => $this->storeLocations($app, $payload['locations'] ?? []),
             'sessions' => array_key_exists('sessions', $payload) && is_array($payload['sessions'])
                 ? $this->replaceSessions($app, $payload['sessions'])
                 : 0,
@@ -149,6 +151,31 @@ class TelemetryIngestor
 
         foreach (array_chunk($records, 500) as $chunk) {
             LoginEvent::insert($chunk);
+        }
+
+        return count($records);
+    }
+
+    private function storeLocations(Application $app, array $rows): int
+    {
+        $records = array_map(fn ($row) => [
+            'application_id' => $app->id,
+            'external_user_id' => isset($row['user_id']) ? (string) $row['user_id'] : null,
+            'user_name' => $row['user_name'] ?? null,
+            'source' => $row['source'],
+            'latitude' => $row['latitude'] ?? null,
+            'longitude' => $row['longitude'] ?? null,
+            'accuracy_m' => isset($row['accuracy']) ? (int) round((float) $row['accuracy']) : null,
+            'city' => $row['city'] ?? null,
+            'region' => $row['region'] ?? null,
+            'country' => $row['country'] ?? null,
+            'ip' => $row['ip'] ?? null,
+            'device' => UserAgent::describe($row['user_agent'] ?? null),
+            'recorded_at' => $this->time($row['occurred_at']),
+        ], $rows);
+
+        foreach (array_chunk($records, 500) as $chunk) {
+            UserLocation::insert($chunk);
         }
 
         return count($records);

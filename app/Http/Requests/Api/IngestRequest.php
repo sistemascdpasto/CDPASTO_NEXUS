@@ -70,6 +70,20 @@ class IngestRequest extends FormRequest
             'audits.*.url' => ['nullable', 'string'],
             'audits.*.occurred_at' => ['required', 'date'],
 
+            'locations' => ['sometimes', 'array', 'max:5000'],
+            'locations.*.user_id' => ['nullable'],
+            'locations.*.user_name' => ['nullable', 'string', 'max:255'],
+            'locations.*.source' => ['required', 'in:gps,ip'],
+            'locations.*.latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'locations.*.longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'locations.*.accuracy' => ['nullable', 'numeric', 'min:0'],
+            'locations.*.city' => ['nullable', 'string', 'max:120'],
+            'locations.*.region' => ['nullable', 'string', 'max:120'],
+            'locations.*.country' => ['nullable', 'string', 'max:80'],
+            'locations.*.ip' => ['nullable', 'string', 'max:45'],
+            'locations.*.user_agent' => ['nullable', 'string'],
+            'locations.*.occurred_at' => ['required', 'date'],
+
             // Si viene la clave, reemplaza la fotografía de sesiones activas (aunque sea vacía).
             'sessions' => ['sometimes', 'nullable', 'array', 'max:5000'],
             'sessions.*.user_id' => ['required'],
