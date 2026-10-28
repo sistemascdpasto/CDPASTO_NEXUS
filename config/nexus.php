@@ -20,6 +20,13 @@ return [
         'window_minutes' => (int) env('NEXUS_ALERT_WINDOW', 10),
     ],
 
+    // Botón de emergencia (desconectar los sistemas de Railway ante un ataque).
+    'emergency' => [
+        // Servicios que NUNCA se apagan: el propio Nexus (para poder reconectar) además de las
+        // bases de datos, que se detectan solas (servicios de imagen: MySQL, Redis…).
+        'protected_services' => array_filter(array_map('trim', explode(',', env('NEXUS_EMERGENCY_PROTECTED', 'CDPASTO_NEXUS,CDPASTO_NEXUS_Scheduler')))),
+    ],
+
     'announcements' => [
         // Webs sin login (sin agente) que también muestran anuncios mediante embed.js.
         'web_apps' => ['bavaria-cdpasto'],

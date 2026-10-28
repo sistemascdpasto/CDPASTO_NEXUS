@@ -17,6 +17,7 @@ import {
     Radio,
     ScrollText,
     Search,
+    ShieldAlert,
     ShieldCheck,
     Siren,
     Sun,
@@ -120,6 +121,7 @@ function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (
                   { label: 'Costos de Railway', href: '/costs', icon: CircleDollarSign, keywords: 'dinero facturacion' },
                   { label: 'Usuarios del panel', href: '/users', icon: Users, keywords: 'jefes encargados' },
                   { label: 'Auditoría del panel', href: '/panel-audit', icon: ShieldCheck, keywords: 'nexus' },
+                  { label: 'Botón de emergencia', href: '/emergency', icon: ShieldAlert, keywords: 'ataque desconectar apagar railway' },
               ]
             : []),
     ];

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Application;
+use App\Models\EmergencyLockdown;
 use App\Services\HealthChecker;
 use Illuminate\Console\Command;
 
@@ -16,6 +17,10 @@ class CheckHealth extends Command
     {
         $apps = Application::active()->get()
             ->when(! $this->option('all'), fn ($apps) => $apps->filter->isDueForCheck());
+
+        // Los servicios apagados con el botón de emergencia no cuentan como caídas.
+        $stopped = EmergencyLockdown::stoppedServiceIds();
+        $apps = $apps->reject(fn (Application $app) => $app->railway_service_id && in_array($app->railway_service_id, $stopped, true));
 
         $checker->checkMany($apps->values());
 

@@ -9,6 +9,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CostController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DatabaseController;
+use App\Http\Controllers\EmergencyController;
 use App\Http\Controllers\ErrorController;
 use App\Http\Controllers\IncidentController;
 use App\Http\Controllers\LocationMapController;
@@ -82,6 +83,13 @@ Route::middleware(['auth', 'active', '2fa'])->group(function () {
         Route::resource('announcements', AnnouncementController::class)->except('show');
         Route::post('announcements/{announcement}/toggle', [AnnouncementController::class, 'toggle'])->name('announcements.toggle');
         Route::get('costs', CostController::class)->name('costs');
+
+        // Botón de emergencia: desconectar / reconectar los sistemas en Railway
+        Route::get('emergency', [EmergencyController::class, 'index'])->name('emergency.index');
+        Route::post('emergency/disconnect', [EmergencyController::class, 'disconnect'])
+            ->middleware('throttle:5,1')->name('emergency.disconnect');
+        Route::post('emergency/reconnect', [EmergencyController::class, 'reconnect'])
+            ->middleware('throttle:5,1')->name('emergency.reconnect');
 
         // Operaciones de superusuario sobre cada app
         Route::get('applications/{application}/database', [DatabaseController::class, 'show'])->name('applications.database');
