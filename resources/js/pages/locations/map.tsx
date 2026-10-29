@@ -35,6 +35,9 @@ interface Props {
 // Paleta categórica en orden fijo: el color sigue a la app, no al orden.
 const APP_COLORS = ['#2a78d6', '#eb6834', '#0ca30c', '#a24bd6', '#d6a12a', '#2ab3b8'];
 
+// Puntos a menos de esta distancia en pantalla se agrupan en un solo marcador.
+const CLUSTER_PX = 22;
+
 const periods: { key: Props['filters']['period']; label: string }[] = [
     { key: 'now', label: 'Conectados ahora' },
     { key: '24h', label: 'Últimas 24 h' },
@@ -79,46 +82,116 @@ export default function LocationMap({ points, byCity, stats, applications, filte
         };
     }, []);
 
-    // Pintar los puntos cada vez que cambian los filtros.
+    // Pintar los puntos cada vez que cambian los filtros, y reagruparlos al cambiar el zoom:
+    // los que quedan a menos de CLUSTER_PX en pantalla se dibujan como un solo marcador con el
+    // número de usuarios, para que ninguno quede escondido debajo de otro.
     useEffect(() => {
-        if (!map.current || !layer.current) return;
-        layer.current.clearLayers();
+        const m = map.current;
+        if (!m || !layer.current) return;
 
-        located.forEach((p) => {
+        const name = (p: Point) => escapeHtml(p.user_name ?? `Usuario ${p.user_id ?? ''}`);
+
+        const detail = (p: Point) => {
             const color = colorFor(p.application?.id);
-            const latlng: L.LatLngExpression = [p.latitude as number, p.longitude as number];
             const precise = p.source === 'gps';
 
-            if (precise && p.accuracy_m && p.accuracy_m > 30) {
-                L.circle(latlng, { radius: p.accuracy_m, color, weight: 1, opacity: 0.4, fillOpacity: 0.06 }).addTo(layer.current!);
-            }
+            return `<strong style="font-size:13px">${name(p)}</strong><br>
+                <span style="color:${color};font-weight:600">${escapeHtml(p.application?.name ?? '')}</span><br>
+                ${escapeHtml(p.place)}<br>
+                <span style="opacity:.7">${precise ? `Ubicación del dispositivo${p.accuracy_m ? ` · ±${p.accuracy_m} m` : ''}` : 'Aproximada por IP'}</span><br>
+                <span style="opacity:.7">${escapeHtml(formatRelative(p.recorded_at))}${p.device ? ' · ' + escapeHtml(p.device) : ''}</span>`;
+        };
 
-            const marker = L.circleMarker(latlng, {
-                radius: precise ? 8 : 7,
-                color: '#ffffff',
-                weight: 2,
-                fillColor: color,
-                fillOpacity: precise ? 0.95 : 0.55,
-                dashArray: precise ? undefined : '3 3',
+        const draw = () => {
+            const group = layer.current!;
+            group.clearLayers();
+
+            // Agrupación voraz por distancia en píxeles a la escala actual.
+            const clusters: { at: L.Point; points: Point[] }[] = [];
+            located.forEach((p) => {
+                const at = m.latLngToLayerPoint([p.latitude as number, p.longitude as number]);
+                const near = clusters.find((c) => c.at.distanceTo(at) < CLUSTER_PX);
+                if (near) near.points.push(p);
+                else clusters.push({ at, points: [p] });
             });
 
-            marker.bindTooltip(escapeHtml(p.user_name ?? `Usuario ${p.user_id ?? ''}`), { direction: 'top', offset: [0, -6] });
-            marker.bindPopup(
-                `<div style="min-width:200px;font-size:12px;line-height:1.45">
-                    <strong style="font-size:13px">${escapeHtml(p.user_name ?? 'Usuario ' + (p.user_id ?? ''))}</strong><br>
-                    <span style="color:${color};font-weight:600">${escapeHtml(p.application?.name ?? '')}</span><br>
-                    ${escapeHtml(p.place)}<br>
-                    <span style="opacity:.7">${precise ? `Ubicación del dispositivo${p.accuracy_m ? ` · ±${p.accuracy_m} m` : ''}` : 'Aproximada por IP'}</span><br>
-                    <span style="opacity:.7">${escapeHtml(formatRelative(p.recorded_at))}${p.device ? ' · ' + escapeHtml(p.device) : ''}</span>
-                </div>`,
-            );
-            marker.addTo(layer.current!);
-        });
+            clusters.forEach(({ points: members }) => {
+                members.forEach((p) => {
+                    if (p.source === 'gps' && p.accuracy_m && p.accuracy_m > 30) {
+                        const color = colorFor(p.application?.id);
+                        L.circle([p.latitude as number, p.longitude as number], {
+                            radius: p.accuracy_m,
+                            color,
+                            weight: 1,
+                            opacity: 0.4,
+                            fillOpacity: 0.06,
+                            interactive: false,
+                        }).addTo(group);
+                    }
+                });
+
+                const first = members[0];
+                const latlng: L.LatLngTuple = [first.latitude as number, first.longitude as number];
+
+                if (members.length === 1) {
+                    const precise = first.source === 'gps';
+                    L.circleMarker(latlng, {
+                        radius: precise ? 8 : 7,
+                        color: '#ffffff',
+                        weight: 2,
+                        fillColor: colorFor(first.application?.id),
+                        fillOpacity: precise ? 0.95 : 0.55,
+                        dashArray: precise ? undefined : '3 3',
+                    })
+                        .bindTooltip(name(first), { direction: 'top', offset: [0, -6] })
+                        .bindPopup(`<div style="min-width:200px;font-size:12px;line-height:1.45">${detail(first)}</div>`)
+                        .addTo(group);
+
+                    return;
+                }
+
+                // Varios usuarios en el mismo sitio: el color es el de la app si todos son de la misma.
+                const colors = new Set(members.map((p) => colorFor(p.application?.id)));
+                const fill = colors.size === 1 ? [...colors][0] : '#3d4450';
+                const size = members.length > 9 ? 30 : 26;
+                const icon = L.divIcon({
+                    className: 'nexus-cluster',
+                    iconSize: [size, size],
+                    html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${fill};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);color:#fff;font:600 12px/${size - 4}px system-ui,sans-serif;text-align:center">${members.length}</div>`,
+                });
+
+                const list = members
+                    .map(
+                        (p) =>
+                            `<div style="display:flex;align-items:center;gap:6px;white-space:nowrap"><span style="width:8px;height:8px;border-radius:50%;flex:none;background:${colorFor(p.application?.id)}"></span>${name(p)}<span style="opacity:.6">· ${escapeHtml(p.application?.name ?? '')}</span></div>`,
+                    )
+                    .join('');
+
+                L.marker(latlng, { icon, zIndexOffset: 1000, keyboard: true, title: `${members.length} usuarios` })
+                    .bindTooltip(
+                        `<div style="font-size:12px;line-height:1.6"><strong>${members.length} usuarios aquí</strong>${list}<span style="opacity:.6">Clic para ver el detalle</span></div>`,
+                        { direction: 'top', offset: [0, -size / 2] },
+                    )
+                    .bindPopup(
+                        `<div style="min-width:220px;max-height:260px;overflow-y:auto;font-size:12px;line-height:1.45">${members
+                            .map(detail)
+                            .join('<hr style="margin:8px 0;border:0;border-top:1px solid rgba(0,0,0,.12)">')}</div>`,
+                    )
+                    .addTo(group);
+            });
+        };
 
         if (located.length > 0) {
             const bounds = L.latLngBounds(located.map((p) => [p.latitude as number, p.longitude as number] as L.LatLngTuple));
-            map.current.fitBounds(bounds.pad(0.25), { maxZoom: 13 });
+            m.fitBounds(bounds.pad(0.25), { maxZoom: 13 });
         }
+
+        draw();
+        m.on('zoomend', draw);
+
+        return () => {
+            m.off('zoomend', draw);
+        };
     }, [located, colorFor]);
 
     return (
@@ -146,7 +219,9 @@ export default function LocationMap({ points, byCity, stats, applications, filte
                                 onClick={() => applyFilters('/map', { period: p.key, app: filters.app })}
                                 className={cn(
                                     'rounded-md px-3 py-1.5 text-sm transition',
-                                    filters.period === p.key ? 'bg-background text-foreground font-medium shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                                    filters.period === p.key
+                                        ? 'bg-background text-foreground font-medium shadow-sm'
+                                        : 'text-muted-foreground hover:text-foreground',
                                 )}
                                 aria-pressed={filters.period === p.key}
                             >
@@ -154,7 +229,11 @@ export default function LocationMap({ points, byCity, stats, applications, filte
                             </button>
                         ))}
                     </div>
-                    <NativeSelect value={filters.app ?? ''} onChange={(e) => applyFilters('/map', { period: filters.period, app: e.target.value })} className="w-56">
+                    <NativeSelect
+                        value={filters.app ?? ''}
+                        onChange={(e) => applyFilters('/map', { period: filters.period, app: e.target.value })}
+                        className="w-56"
+                    >
                         <option value="">Todas las apps</option>
                         {applications.map((a) => (
                             <option key={a.id} value={a.id}>
@@ -197,7 +276,10 @@ export default function LocationMap({ points, byCity, stats, applications, filte
                                         <li key={c.city} className="flex items-center gap-2">
                                             <span className="flex-1 truncate">{c.city}</span>
                                             <span className="bg-muted h-1.5 w-20 overflow-hidden rounded-full">
-                                                <span className="bg-primary block h-full rounded-full" style={{ width: `${(c.users / byCity[0].users) * 100}%` }} />
+                                                <span
+                                                    className="bg-primary block h-full rounded-full"
+                                                    style={{ width: `${(c.users / byCity[0].users) * 100}%` }}
+                                                />
                                             </span>
                                             <span className="w-6 text-right tabular-nums">{c.users}</span>
                                         </li>

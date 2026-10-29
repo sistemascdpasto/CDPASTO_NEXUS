@@ -25,6 +25,11 @@ class RemoteCommander
     /** Cierre masivo: todas las sesiones de la app (solo superadmin, con contraseña y 2FA). */
     public const LOGOUT_ALL = 'logout_all';
 
+    /** Ubicación obligatoria (módulo propio, no desde Operaciones). */
+    public const LOCATION_ON = 'location_on';
+
+    public const LOCATION_OFF = 'location_off';
+
     /** Comandos sobre la aplicación completa (solo superadmin). */
     public const APP_COMMANDS = [
         'maintenance_on' => 'Activó el modo mantenimiento de',
@@ -85,6 +90,8 @@ class RemoteCommander
         $description = match (true) {
             isset(self::APP_COMMANDS[$type]) => self::APP_COMMANDS[$type]." {$app->name}",
             $type === self::LOGOUT_ALL => "Cerró todas las sesiones de {$app->name}",
+            $type === self::LOCATION_ON => "Activó la ubicación obligatoria en {$app->name}",
+            $type === self::LOCATION_OFF => "Desactivó la ubicación obligatoria en {$app->name}",
             default => ['logout' => 'Cerró la sesión de', 'block' => 'Bloqueó a', 'unblock' => 'Desbloqueó a'][$type]." {$targetName} (#{$externalUserId}) en {$app->name}",
         };
 

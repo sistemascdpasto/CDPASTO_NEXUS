@@ -11,6 +11,7 @@ import {
     CircleDollarSign,
     KeyRound,
     LayoutGrid,
+    LocateFixed,
     MapPinned,
     Megaphone,
     Radio,
@@ -48,6 +49,7 @@ export function AppSidebar() {
         { title: 'Costos de Railway', url: '/costs', icon: CircleDollarSign },
         { title: 'Usuarios del panel', url: '/users', icon: Users },
         { title: 'Auditoría del panel', url: '/panel-audit', icon: ShieldCheck },
+        { title: 'Ubicación obligatoria', url: '/location-policy', icon: LocateFixed },
         { title: 'Botón de emergencia', url: '/emergency', icon: ShieldAlert },
     ];
 

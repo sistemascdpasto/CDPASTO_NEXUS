@@ -3,6 +3,7 @@
 namespace Cdpasto\NexusAgent\Http\Controllers;
 
 use Cdpasto\NexusAgent\Blocks;
+use Cdpasto\NexusAgent\Location;
 use Cdpasto\NexusAgent\Recorder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,7 +14,7 @@ use Throwable;
 
 /**
  * Órdenes de Nexus: sobre usuarios (cerrar sesión, bloquear, desbloquear) y sobre la app
- * (mantenimiento, limpiar caché, reintentar trabajos fallidos).
+ * (mantenimiento, limpiar caché, reintentar trabajos fallidos, ubicación obligatoria).
  */
 class CommandController
 {
@@ -22,7 +23,7 @@ class CommandController
     public function __invoke(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'type' => ['required', 'in:logout,logout_all,block,unblock,maintenance_on,maintenance_off,cache_clear,queue_retry'],
+            'type' => ['required', 'in:logout,logout_all,block,unblock,maintenance_on,maintenance_off,cache_clear,queue_retry,location_on,location_off'],
             'user_id' => ['nullable', 'required_if:type,'.implode(',', self::USER_COMMANDS), 'string', 'max:64'],
             'minutes' => ['nullable', 'integer', 'min:1'],
             'reason' => ['nullable', 'string', 'max:255'],
@@ -38,6 +39,8 @@ class CommandController
                 'maintenance_off' => $this->maintenanceOff(),
                 'cache_clear' => $this->artisan('cache:clear', [], 'Caché de la aplicación limpiada.'),
                 'queue_retry' => $this->artisan('queue:retry', ['id' => ['all']], 'Trabajos fallidos enviados de nuevo a la cola.'),
+                'location_on' => $this->locationPolicy(true),
+                'location_off' => $this->locationPolicy(false),
             };
         } catch (Throwable $e) {
             return response()->json(['ok' => false, 'message' => $e->getMessage()], 500);
@@ -116,6 +119,13 @@ class CommandController
         ]);
 
         return $minutes ? "Usuario bloqueado por {$minutes} minutos." : 'Usuario bloqueado hasta nuevo aviso.';
+    }
+
+    private function locationPolicy(bool $required): string
+    {
+        Location::storePolicy($required);
+
+        return $required ? 'Ubicación obligatoria activada.' : 'Ubicación obligatoria desactivada.';
     }
 
     private function maintenanceOn(): string

@@ -4,7 +4,9 @@ namespace Cdpasto\NexusAgent;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Ubicación del usuario conectado (trazabilidad).
@@ -26,12 +28,56 @@ class Location
     /** Estado del permiso en esta sesión: ['user' => id, 'status' => granted|denied]. */
     public const PERMISSION_KEY = 'nexus_location_permission';
 
+    /** Clave en nexus_state con la política que define Nexus: {"required": bool}. */
+    public const POLICY_KEY = 'location_policy';
+
+    private static ?bool $policy = null;
+
     /**
-     * ¿Se exige permitir la ubicación para usar la app? (config nexus_agent.location.required)
+     * ¿Se exige permitir la ubicación para usar la app? Lo decide Nexus (módulo «Ubicación
+     * obligatoria»); NEXUS_LOCATION_REQUIRED=false la apaga localmente pase lo que pase.
      */
     public static function required(): bool
     {
-        return (bool) config('nexus_agent.location.required', true);
+        if (! config('nexus_agent.location.required', true)) {
+            return false;
+        }
+
+        if (self::$policy === null) {
+            try {
+                $raw = DB::table('nexus_state')->where('key', self::POLICY_KEY)->value('value');
+                $data = $raw ? json_decode($raw, true) : null;
+            } catch (Throwable) {
+                $data = null;
+            }
+
+            // Sin política guardada (Nexus aún no la envió) se exige, como hasta ahora.
+            self::$policy = is_array($data) && array_key_exists('required', $data) ? (bool) $data['required'] : true;
+        }
+
+        return self::$policy;
+    }
+
+    /**
+     * Guarda la política que envía Nexus (en cada ingesta o con la orden location_on/off).
+     */
+    public static function storePolicy(mixed $required): void
+    {
+        if (! is_bool($required)) {
+            return;
+        }
+
+        rescue(fn () => DB::table('nexus_state')->updateOrInsert(
+            ['key' => self::POLICY_KEY],
+            ['value' => json_encode(['required' => $required]), 'updated_at' => now()],
+        ));
+
+        self::$policy = null;
+    }
+
+    public static function flushPolicy(): void
+    {
+        self::$policy = null;
     }
 
     /**
@@ -119,7 +165,7 @@ class Location
     {
         try {
             $value = request()->hasSession() ? request()->session()->get(self::SESSION_KEY) : null;
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return null;
         }
 

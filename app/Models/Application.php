@@ -40,6 +40,7 @@ class Application extends Model
         'failed_login_threshold',
         'mass_delete_threshold',
         'is_active',
+        'location_required',
     ];
 
     /**
@@ -54,6 +55,7 @@ class Application extends Model
         'failed_login_threshold' => 10,
         'mass_delete_threshold' => 30,
         'is_active' => true,
+        'location_required' => true,
         'status' => 'unknown',
         'consecutive_failures' => 0,
     ];
@@ -69,6 +71,7 @@ class Application extends Model
             'api_key' => 'encrypted',
             'status' => AppStatus::class,
             'is_active' => 'boolean',
+            'location_required' => 'boolean',
             'last_components' => 'array',
             'last_info' => 'array',
             'last_info_at' => 'datetime',

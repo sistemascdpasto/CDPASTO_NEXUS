@@ -24,6 +24,10 @@ class IngestController extends Controller
                 'app' => $application->slug,
                 'items' => Announcement::feedFor($application),
             ],
+            // Módulo «Ubicación obligatoria»: el agente la aplica aunque la orden directa falle.
+            'policy' => [
+                'location_required' => (bool) $application->location_required,
+            ],
         ]);
     }
 

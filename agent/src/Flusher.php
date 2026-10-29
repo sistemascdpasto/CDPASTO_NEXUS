@@ -76,6 +76,8 @@ class Flusher
 
             // Nexus devuelve los anuncios vigentes de esta app en cada ingesta.
             Announcements::store($response->json('announcements'));
+            // …y si la app exige la ubicación (módulo «Ubicación obligatoria»).
+            Location::storePolicy($response->json('policy.location_required'));
 
             return ['ok' => true, 'sent' => $rows->count(), 'message' => 'Enviado'];
         } catch (Throwable $e) {

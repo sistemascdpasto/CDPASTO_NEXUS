@@ -13,6 +13,7 @@ use App\Http\Controllers\EmergencyController;
 use App\Http\Controllers\ErrorController;
 use App\Http\Controllers\IncidentController;
 use App\Http\Controllers\LocationMapController;
+use App\Http\Controllers\LocationPolicyController;
 use App\Http\Controllers\LoginEventController;
 use App\Http\Controllers\NocController;
 use App\Http\Controllers\OperationsController;
@@ -87,6 +88,11 @@ Route::middleware(['auth', 'active', '2fa'])->group(function () {
         // Cierre masivo de sesiones en las apps con login
         Route::post('sessions/logout-all', [SessionController::class, 'logoutAll'])
             ->middleware('throttle:5,1')->name('sessions.logout-all');
+
+        // Ubicación obligatoria por app
+        Route::get('location-policy', [LocationPolicyController::class, 'index'])->name('location-policy.index');
+        Route::put('location-policy/{application}', [LocationPolicyController::class, 'update'])
+            ->middleware('throttle:10,1')->name('location-policy.update');
 
         // Botón de emergencia: desconectar / reconectar los sistemas en Railway
         Route::get('emergency', [EmergencyController::class, 'index'])->name('emergency.index');

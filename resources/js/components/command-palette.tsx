@@ -12,6 +12,7 @@ import {
     KeyRound,
     LayoutGrid,
     LoaderCircle,
+    LocateFixed,
     Monitor,
     Moon,
     Radio,
@@ -121,6 +122,7 @@ function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (
                   { label: 'Costos de Railway', href: '/costs', icon: CircleDollarSign, keywords: 'dinero facturacion' },
                   { label: 'Usuarios del panel', href: '/users', icon: Users, keywords: 'jefes encargados' },
                   { label: 'Auditoría del panel', href: '/panel-audit', icon: ShieldCheck, keywords: 'nexus' },
+                  { label: 'Ubicación obligatoria', href: '/location-policy', icon: LocateFixed, keywords: 'gps permiso exigir rastreo' },
                   { label: 'Botón de emergencia', href: '/emergency', icon: ShieldAlert, keywords: 'ataque desconectar apagar railway' },
               ]
             : []),
