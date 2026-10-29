@@ -84,6 +84,10 @@ Route::middleware(['auth', 'active', '2fa'])->group(function () {
         Route::post('announcements/{announcement}/toggle', [AnnouncementController::class, 'toggle'])->name('announcements.toggle');
         Route::get('costs', CostController::class)->name('costs');
 
+        // Cierre masivo de sesiones en las apps con login
+        Route::post('sessions/logout-all', [SessionController::class, 'logoutAll'])
+            ->middleware('throttle:5,1')->name('sessions.logout-all');
+
         // Botón de emergencia: desconectar / reconectar los sistemas en Railway
         Route::get('emergency', [EmergencyController::class, 'index'])->name('emergency.index');
         Route::post('emergency/disconnect', [EmergencyController::class, 'disconnect'])

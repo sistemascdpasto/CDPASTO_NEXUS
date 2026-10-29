@@ -1,3 +1,4 @@
+import { type MassLogoutApp, MassLogoutDialog } from '@/components/mass-logout-dialog';
 import { EmptyState, NativeSelect, PageHeader, Panel, Table, applyFilters } from '@/components/nexus-ui';
 import { UnblockButton, UserActionsMenu } from '@/components/user-action-dialog';
 import AppLayout from '@/layouts/app-layout';
@@ -21,11 +22,12 @@ interface Props {
     blocks: Block[];
     applications: (AppRef & { last_ingest_at: string | null })[];
     operableIds: number[];
+    massLogoutApps: MassLogoutApp[];
     filters: { application_id?: string | null };
     refreshedAt: string;
 }
 
-export default function SessionsIndex({ sessions, blocks, applications, operableIds, filters, refreshedAt }: Props) {
+export default function SessionsIndex({ sessions, blocks, applications, operableIds, massLogoutApps, filters, refreshedAt }: Props) {
     usePoll(15_000, {}, { keepAlive: false });
 
     const byApp = applications.map((app) => ({ app, rows: sessions.filter((s) => s.application_id === app.id) })).filter((g) => g.rows.length > 0);
@@ -49,18 +51,21 @@ export default function SessionsIndex({ sessions, blocks, applications, operable
                         </span>
                     }
                     actions={
-                        <NativeSelect
-                            value={filters.application_id ?? ''}
-                            onChange={(e) => applyFilters('/sessions', { application_id: e.target.value })}
-                            aria-label="Aplicación"
-                        >
-                            <option value="">Todas las apps</option>
-                            {applications.map((a) => (
-                                <option key={a.id} value={a.id}>
-                                    {a.name}
-                                </option>
-                            ))}
-                        </NativeSelect>
+                        <>
+                            {massLogoutApps.length > 0 && <MassLogoutDialog apps={massLogoutApps} />}
+                            <NativeSelect
+                                value={filters.application_id ?? ''}
+                                onChange={(e) => applyFilters('/sessions', { application_id: e.target.value })}
+                                aria-label="Aplicación"
+                            >
+                                <option value="">Todas las apps</option>
+                                {applications.map((a) => (
+                                    <option key={a.id} value={a.id}>
+                                        {a.name}
+                                    </option>
+                                ))}
+                            </NativeSelect>
+                        </>
                     }
                 />
 

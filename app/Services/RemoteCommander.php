@@ -22,6 +22,9 @@ class RemoteCommander
 
     public const UNBLOCK = 'unblock';
 
+    /** Cierre masivo: todas las sesiones de la app (solo superadmin, con contraseña y 2FA). */
+    public const LOGOUT_ALL = 'logout_all';
+
     /** Comandos sobre la aplicación completa (solo superadmin). */
     public const APP_COMMANDS = [
         'maintenance_on' => 'Activó el modo mantenimiento de',
@@ -75,9 +78,15 @@ class RemoteCommander
             AppSession::where('application_id', $app->id)->where('external_user_id', $externalUserId)->delete();
         }
 
-        $description = isset(self::APP_COMMANDS[$type])
-            ? self::APP_COMMANDS[$type]." {$app->name}"
-            : ['logout' => 'Cerró la sesión de', 'block' => 'Bloqueó a', 'unblock' => 'Desbloqueó a'][$type]." {$targetName} (#{$externalUserId}) en {$app->name}";
+        if ($ok && $type === self::LOGOUT_ALL) {
+            AppSession::where('application_id', $app->id)->delete();
+        }
+
+        $description = match (true) {
+            isset(self::APP_COMMANDS[$type]) => self::APP_COMMANDS[$type]." {$app->name}",
+            $type === self::LOGOUT_ALL => "Cerró todas las sesiones de {$app->name}",
+            default => ['logout' => 'Cerró la sesión de', 'block' => 'Bloqueó a', 'unblock' => 'Desbloqueó a'][$type]." {$targetName} (#{$externalUserId}) en {$app->name}",
+        };
 
         PanelAudit::log("remote.{$type}", $description.($ok ? '' : ' — FALLÓ: '.$message), $app, [
             'external_user_id' => $externalUserId,

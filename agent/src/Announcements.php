@@ -101,18 +101,19 @@ class Announcements
 
         try {
             $authenticated = auth()->check();
-        } catch (\Throwable) {
+        } catch (Throwable) {
             $authenticated = false;
         }
 
         return sprintf(
-            '<script src="%s" data-nexus-modo="sesion" data-nexus-app="%s" data-nexus-endpoint="%s" data-nexus-anuncios="%d" data-nexus-ubicacion="%s" data-nexus-sesion="%d" defer></script>',
+            '<script src="%s" data-nexus-modo="sesion" data-nexus-app="%s" data-nexus-endpoint="%s" data-nexus-anuncios="%d" data-nexus-ubicacion="%s" data-nexus-sesion="%d" data-nexus-ubicacion-obligatoria="%d" defer></script>',
             e($current['embed_url']),
             e((string) $current['app']),
             '/nexus/anuncios',
             self::any() ? 1 : 0,
             '/nexus/ubicacion',
             $authenticated ? 1 : 0,
+            Location::required() ? 1 : 0,
         );
     }
 

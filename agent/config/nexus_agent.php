@@ -44,6 +44,13 @@ return [
         'max_wait_minutes' => 30,
     ],
 
+    'location' => [
+        // Ubicación obligatoria: sin permiso de ubicación el usuario no puede usar la app.
+        'required' => env('NEXUS_LOCATION_REQUIRED', env('APP_ENV') !== 'testing'),
+        // Rutas que nunca se frenan (patrones de Str::is sobre el path).
+        'except' => ['nexus/*', 'logout', 'livewire/*', 'broadcasting/*', 'sanctum/*', 'build/*', 'storage/*', 'up', 'favicon.ico'],
+    ],
+
     // Campo del formulario de login donde se muestra el aviso de bloqueo (email, identification_number…).
     'login_field' => env('NEXUS_LOGIN_FIELD', 'email'),
 

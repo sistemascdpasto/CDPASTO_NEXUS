@@ -23,6 +23,47 @@ class Location
     /** Cookie (legible por JavaScript) que marca «tomar la ubicación tras este login». */
     public const COOKIE = 'nexus_ubicacion';
 
+    /** Estado del permiso en esta sesión: ['user' => id, 'status' => granted|denied]. */
+    public const PERMISSION_KEY = 'nexus_location_permission';
+
+    /**
+     * ¿Se exige permitir la ubicación para usar la app? (config nexus_agent.location.required)
+     */
+    public static function required(): bool
+    {
+        return (bool) config('nexus_agent.location.required', true);
+    }
+
+    /**
+     * ¿El usuario conectado ya dio permiso de ubicación en esta sesión?
+     */
+    public static function permitted(Request $request): bool
+    {
+        $permission = $request->session()->get(self::PERMISSION_KEY);
+        $user = $request->user();
+
+        return is_array($permission)
+            && ($permission['status'] ?? null) === 'granted'
+            && $user && (string) ($permission['user'] ?? '') === (string) $user->getAuthIdentifier();
+    }
+
+    /**
+     * Guarda el resultado del navegador: con coordenadas o sin señal (unavailable/timeout) el
+     * permiso está dado; denied/unsupported lo niega. Sin «error» (scripts viejos) no cambia nada.
+     */
+    public static function rememberPermission(Request $request, bool $hasCoords, ?string $error): void
+    {
+        $status = match (true) {
+            $hasCoords, in_array($error, ['unavailable', 'timeout'], true) => 'granted',
+            in_array($error, ['denied', 'unsupported'], true) => 'denied',
+            default => null,
+        };
+
+        if ($status && $request->user()) {
+            $request->session()->put(self::PERMISSION_KEY, ['user' => (string) $request->user()->getAuthIdentifier(), 'status' => $status]);
+        }
+    }
+
     /**
      * @param  array{latitude?: float|null, longitude?: float|null, accuracy?: float|null}  $coords
      * @return array<string, mixed>

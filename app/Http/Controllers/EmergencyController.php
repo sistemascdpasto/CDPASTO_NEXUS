@@ -2,15 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ConfirmsIdentity;
 use App\Models\EmergencyLockdown;
 use App\Services\EmergencyLockdownService;
-use App\Services\PanelAudit;
 use App\Services\RailwayClient;
-use App\Services\TwoFactor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
@@ -20,6 +17,8 @@ use Throwable;
  */
 class EmergencyController extends Controller
 {
+    use ConfirmsIdentity;
+
     public function index(EmergencyLockdownService $service, RailwayClient $railway): Response
     {
         $targets = [];
@@ -45,7 +44,7 @@ class EmergencyController extends Controller
         ]);
     }
 
-    public function disconnect(Request $request, EmergencyLockdownService $service, TwoFactor $twoFactor): RedirectResponse
+    public function disconnect(Request $request, EmergencyLockdownService $service): RedirectResponse
     {
         $data = $request->validate([
             'reason' => ['required', 'string', 'min:5', 'max:500'],
@@ -58,7 +57,7 @@ class EmergencyController extends Controller
             'confirmation.in' => 'Escribe DESCONECTAR en mayúsculas para confirmar.',
         ]);
 
-        $this->confirmIdentity($request, $twoFactor, 'emergency.disconnect');
+        $this->confirmIdentity($request, 'emergency.disconnect');
 
         try {
             $lockdown = $service->disconnect($request->user(), $data['reason'], ($data['services'] ?? null) ?: null);
@@ -73,7 +72,7 @@ class EmergencyController extends Controller
             : back()->with('success', 'Sistemas desconectados. Las bases de datos y Nexus siguen en línea.');
     }
 
-    public function reconnect(Request $request, EmergencyLockdownService $service, TwoFactor $twoFactor): RedirectResponse
+    public function reconnect(Request $request, EmergencyLockdownService $service): RedirectResponse
     {
         $data = $request->validate([
             'services' => ['nullable', 'array'],
@@ -82,7 +81,7 @@ class EmergencyController extends Controller
             'code' => ['required', 'string'],
         ]);
 
-        $this->confirmIdentity($request, $twoFactor, 'emergency.reconnect');
+        $this->confirmIdentity($request, 'emergency.reconnect');
 
         $lockdown = $service->reconnect($request->user(), ($data['services'] ?? null) ?: null);
 
@@ -93,26 +92,5 @@ class EmergencyController extends Controller
         return $lockdown->status === EmergencyLockdown::RELEASED
             ? back()->with('success', 'Reconexión iniciada. Los sistemas vuelven en 1 o 2 minutos.')
             : back()->with('success', 'Reconexión parcial iniciada. Algunos servicios siguen detenidos.');
-    }
-
-    /**
-     * Contraseña + código del autenticador: así una sesión robada no basta para apagar (ni
-     * encender) los sistemas.
-     */
-    private function confirmIdentity(Request $request, TwoFactor $twoFactor, string $action): void
-    {
-        $user = $request->user();
-
-        if (! Hash::check($request->input('password'), $user->password)) {
-            PanelAudit::log("{$action}_denied", 'Contraseña incorrecta al confirmar el botón de emergencia', $user);
-
-            throw ValidationException::withMessages(['password' => 'La contraseña no es correcta.']);
-        }
-
-        if (! $user->two_factor_secret || ! $twoFactor->verify($user->two_factor_secret, $request->input('code'), $user->id)) {
-            PanelAudit::log("{$action}_denied", 'Código de doble factor inválido al confirmar el botón de emergencia', $user);
-
-            throw ValidationException::withMessages(['code' => 'El código del autenticador no es válido.']);
-        }
     }
 }

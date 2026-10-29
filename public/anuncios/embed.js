@@ -265,6 +265,8 @@
     // con permiso del usuario; si no lo da, la app usa la ciudad aproximada por su IP.
     var endpointUbicacion = script.getAttribute('data-nexus-ubicacion');
     var conSesion = script.getAttribute('data-nexus-sesion') === '1';
+    // Ubicación obligatoria: sin permiso la app no se puede usar (el agente muestra el aviso).
+    var obligatoria = script.getAttribute('data-nexus-ubicacion-obligatoria') === '1';
     var COOKIE_UBICACION = 'nexus_ubicacion';
     var INTERVALO = 10 * 60 * 1000;
     var CLAVE_ULTIMA = 'nexus-ubicacion-ultima:' + app;
@@ -302,28 +304,34 @@
             .then(function (r) {
                 if (r.status === 401) {
                     detenerUbicacion();
-                    return;
+                    return null;
                 }
                 if (r.ok) {
                     guardar(CLAVE_ULTIMA, String(Date.now()));
                     iniciarIntervalo();
+                    return r.json();
                 }
+                return null;
+            })
+            .then(function (r) {
+                // Quitó el permiso a mitad de sesión: al recargar, la app pide activarlo.
+                if (r && r.blocked && obligatoria) location.reload();
             })
             .catch(function () {});
     }
 
     function pedirPosicion() {
         if (!navigator.geolocation) {
-            enviarUbicacion({});
+            enviarUbicacion({ error: 'unsupported' });
             return;
         }
         navigator.geolocation.getCurrentPosition(
             function (pos) {
                 enviarUbicacion({ latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy });
             },
-            function () {
+            function (err) {
                 // Sin permiso, sin señal o tiempo agotado: la app usa la ciudad aproximada por IP.
-                enviarUbicacion({});
+                enviarUbicacion({ error: err.code === 1 ? 'denied' : err.code === 3 ? 'timeout' : 'unavailable' });
             },
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 5 * 60 * 1000 },
         );
@@ -358,6 +366,11 @@
         enviando = true;
 
         var preguntar = function () {
+            // Obligatoria: el aviso del agente ya explicó el motivo, se pide directo.
+            if (obligatoria) {
+                pedirPosicion();
+                return;
+            }
             var aviso = guardado(CLAVE_AVISO);
             // Si dijo «Ahora no», se vuelve a ofrecer a los 7 días.
             if (aviso && aviso !== 'aceptado' && Date.now() - Number(aviso) < 7 * 24 * 3600 * 1000) {
@@ -375,7 +388,7 @@
                 .query({ name: 'geolocation' })
                 .then(function (estado) {
                     if (estado.state === 'granted') pedirPosicion();
-                    else if (estado.state === 'denied') enviarUbicacion({});
+                    else if (estado.state === 'denied') enviarUbicacion({ error: 'denied' });
                     else preguntar();
                 })
                 .catch(preguntar);
@@ -416,6 +429,8 @@
     }
 
     function iniciar() {
+        // En el aviso de ubicación obligatoria no se muestra nada más (él mismo la toma).
+        if (window.__nexusUbicacionObligatoria) return;
         if (modo === 'sesion') {
             revisarSesion();
             revisarUbicacion();

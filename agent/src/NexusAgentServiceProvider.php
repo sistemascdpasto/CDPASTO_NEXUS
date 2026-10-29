@@ -5,6 +5,7 @@ namespace Cdpasto\NexusAgent;
 use Cdpasto\NexusAgent\Console\FlushCommand;
 use Cdpasto\NexusAgent\Http\Middleware\EnforceBlocks;
 use Cdpasto\NexusAgent\Http\Middleware\RecordRequest;
+use Cdpasto\NexusAgent\Http\Middleware\RequireLocation;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Auth\Events\Login;
@@ -22,7 +23,7 @@ use Throwable;
 
 class NexusAgentServiceProvider extends ServiceProvider
 {
-    public const VERSION = '1.3.0';
+    public const VERSION = '1.4.0';
 
     public function register(): void
     {
@@ -62,6 +63,7 @@ class NexusAgentServiceProvider extends ServiceProvider
 
         $this->app->booted(function () {
             $this->app->make(Router::class)->pushMiddlewareToGroup('web', EnforceBlocks::class);
+            $this->app->make(Router::class)->pushMiddlewareToGroup('web', RequireLocation::class);
         });
     }
 
